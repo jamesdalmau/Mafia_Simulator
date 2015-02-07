@@ -23,3 +23,4 @@ DeputyVigilante="No"        # "Yes" or "No"
 DeputyTeamRecruiter="No"    # "Yes" or "No"
 NightKillResistant=0        # -1 (for invulnerable), 0 (for normal), otherwise X-shot
 LynchResistant=0            # -1 (for invulnerable), 0 (for normal), otherwise X-shot
+***                         # Ensure that "***" appears at the end of each player setup
