@@ -86,14 +86,17 @@ def CreatePlayerList():
         else:   # If the line is not "***", interpret the line to add it to the PlayerToAdd dictionary
             exec("PlayerToAdd['" + LineFromTextFile.replace("=", "']="))
 
+
+def SearchPlayersFor(Variable,Operator,Comparator): #When calling this, if Comparator is string, make sure to encase it in single quotes
+    ListToReturn = []
+    for Player in PlayerList:
+        if eval("Player['" + Variable +"'] " + Operator + " " + Comparator + "") == True:
+            ListToReturn.append(Player['PlayerID'])
+    return ListToReturn
+
+
 InitiateVariables()
 CreatePlayerList()
 
 
-def ReturnAllPlayersWhereVariableIsComparator(Variable,Comparator):
-    ListToReturn = []
-    for Player in PlayerList:
-        PlayerIdToAddToList=""
-        VariableRetrieved=""
-        exec("VariableRetrieved = Player['" + Variable +"']")
-        If VariableRetrieved = Comparator
+
