@@ -26,10 +26,11 @@ def IsNumberOddOrEven(NumberToTest):  # Useful for determining whether a day or 
 
 
 def ReturnOneListWithCommonItemsFromTwoLists(List1, List2):
+    ReturningList = []
     for i in List2:
         if List1.count(i) > 0:
-            List1.remove(i)
-    return List1
+            ReturningList.append(i)
+    return ReturningList
 
 
 def ReturnOneListWithCommonItemsFromThreeLists(List1, List2, List3):
@@ -100,3 +101,5 @@ def SearchPlayersFor(Variable,Operator,Comparator):
 
 InitiateVariables()
 CreatePlayerList()
+
+print(ReturnOneListWithCommonItemsFromTwoLists(SearchPlayersFor('Alignment',"==","'Town'"), SearchPlayersFor('NightKillResistant',"!=",'0')))
