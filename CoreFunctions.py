@@ -6,16 +6,8 @@ from random import randint  # This gets the function that is used to get a rando
 def InitiateVariables():
     global PlayerID
     global PlayerList
-    global PlayerAttributes
     PlayerID = 0  # This zeroes the counter that is used by function AddPlayer when populating the player list
     PlayerList = []  # This creates an empty list to fill with players
-    PlayerAttributes = (
-        'Alignment', 'Team', 'Survivor',
-        # This is a list of all the attributes that players get created with
-        'BelovedPrincess', 'LynchBomb', 'NightBomb', 'InnocentChild', 'FriendlyNeighbour', 'Saulus', 'Judas',
-        'Cop', 'Doctor', 'Roleblocker', 'Busdriver', 'Vigilante', 'TeamRecruiter',
-        'DeputyCop', 'DeputyDoctor', 'DeputyRoleblocker', 'DeputyBusdriver', 'DeputyVigilante', 'DeputyTeamRecruiter',
-        'NightKillResistant', 'LynchResistant')
 
 
 def IsNumberOddOrEven(NumberToTest):  # Useful for determining whether a day or a night is odd or even
@@ -102,4 +94,3 @@ def SearchPlayersFor(Variable,Operator,Comparator):
 InitiateVariables()
 CreatePlayerList()
 
-print(ReturnOneListWithCommonItemsFromTwoLists(SearchPlayersFor('Alignment',"==","'Town'"), SearchPlayersFor('NightKillResistant',"!=",'0')))
