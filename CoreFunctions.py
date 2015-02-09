@@ -88,4 +88,12 @@ def CreatePlayerList():
 
 InitiateVariables()
 CreatePlayerList()
-print(PlayerList) # Debugging
+
+
+def ReturnAllPlayersWhereVariableIsComparator(Variable,Comparator):
+    ListToReturn = []
+    for Player in PlayerList:
+        PlayerIdToAddToList=""
+        VariableRetrieved=""
+        exec("VariableRetrieved = Player['" + Variable +"']")
+        If VariableRetrieved = Comparator
