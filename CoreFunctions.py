@@ -45,7 +45,6 @@ def PickRandomItemFromList(List1):
 
 
 def CreatePlayerList():
-    global PlayerID
     global PlayerList
     PlayerID=1
     PlayerSetupFile = list(open('players.txt', 'r')) #Read players.txt and create a list
@@ -73,35 +72,21 @@ def CreatePlayerList():
     DeputyTeamRecruiter=""    # "Yes" or "No"
     NightKillResistant=""        # -1 (for invulnerable), 0 (for normal), otherwise X-shot
     LynchResistant=""            # -1 (for invulnerable), 0 (for normal), otherwise X-shot
-    for LineFromTextFile in PlayerSetupFile:
-        if LineFromTextFile[:3] == '***':
-            AddPlayer(PlayerID, Alignment, Team, Survivor, BelovedPrincess, LynchBomb, NightBomb, InnocentChild, FriendlyNeighbour, Saulus, Judas, Cop, Doctor, Roleblocker, Busdriver, Vigilante, TeamRecruiter, DeputyCop, DeputyDoctor, DeputyRoleblocker, DeputyBusdriver, DeputyVigilante, DeputyTeamRecruiter,  NightKillResistant, LynchResistant)
-            PlayerID += 1
-        else:
-            exec(LineFromTextFile)
-    print(PlayerList)
-
-# noinspection PyUnusedLocal
-def AddPlayer(PlayerIDToInsert, Alignment, Team, Survivor, BelovedPrincess, LynchBomb, NightBomb, InnocentChild,
-              FriendlyNeighbour, Saulus, Judas, Cop, Doctor, Roleblocker, Busdriver, Vigilante, TeamRecruiter,
-              DeputyCop, DeputyDoctor, DeputyRoleblocker, DeputyBusdriver, DeputyVigilante, DeputyTeamRecruiter,
-              NightKillResistant, LynchResistant):
-    global PlayerList
     PlayerToAdd = {}
-    PlayerToAdd['Playerid'] = PlayerIDToInsert
-    AttributeToAdd = ""
-    for Attribute in PlayerAttributes:
-        exec("AttributeToAdd = '" + Attribute + "'")
-        exec("PlayerToAdd['" + Attribute + "'] = '" + AttributeToAdd + "'")
-    if InnocentChild == "Yes":
-        PlayerToAdd['NumberOfNamesInHat'] = 0
-    else:
-        PlayerToAdd['NumberOfNamesInHat'] = 100
-    PlayerList.append(PlayerToAdd)
-    print(PlayerToAdd)
-    print(PlayerList)
-    PlayerToAdd.clear()
-
+    for LineFromTextFile in PlayerSetupFile:
+        if LineFromTextFile[:3] == '***':   # If the line is "***" it's time to add the Player to the List
+            PlayerToAdd['PlayerID']=PlayerID    # New PlayerID is not take from text file but dynamically generated
+            if PlayerToAdd['InnocentChild'] == "Yes":
+                PlayerToAdd['NumberOfNamesInHat'] = 0
+            else:
+                PlayerToAdd['NumberOfNamesInHat'] = 100
+            PlayerList.append(PlayerToAdd)  # Add PlayerToAdd to the global PlayerList list
+            print(PlayerList)   # Debugging
+            PlayerID += 1
+            PlayerToAdd.clear() # Empty PlayerToAdd so that the next player can be assembled
+        else:   # If the line is not "***", interpret the line to add it to the PlayerToAdd dictionary
+            exec("PlayerToAdd['" + LineFromTextFile.replace("=", "']="))
 
 InitiateVariables()
 CreatePlayerList()
+print(PlayerList) # Debugging
