@@ -80,8 +80,7 @@ def CreatePlayerList():
                 PlayerToAdd['NumberOfNamesInHat'] = 0
             else:
                 PlayerToAdd['NumberOfNamesInHat'] = 100
-            PlayerList.append(PlayerToAdd)  # Add PlayerToAdd to the global PlayerList list
-            print(PlayerList)   # Debugging
+            PlayerList.append(PlayerToAdd.copy())  # Add PlayerToAdd to the global PlayerList list
             PlayerID += 1
             PlayerToAdd.clear() # Empty PlayerToAdd so that the next player can be assembled
         else:   # If the line is not "***", interpret the line to add it to the PlayerToAdd dictionary
