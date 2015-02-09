@@ -69,6 +69,7 @@ def CreatePlayerList():
     for LineFromTextFile in PlayerSetupFile:
         if LineFromTextFile[:3] == '***':   # If the line is "***" it's time to add the Player to the List
             PlayerToAdd['PlayerID']=PlayerID    # New PlayerID is not take from text file but dynamically generated
+            PlayerToAdd['Alive']='Yes'    # Default 'Alive' to 'Yes', can change to 'No' during game
             if PlayerToAdd['InnocentChild'] == "Yes":
                 PlayerToAdd['NumberOfNamesInHat'] = 0
             else:
@@ -89,6 +90,24 @@ def SearchPlayersFor(Variable,Operator,Comparator):
         if eval("Player['" + Variable +"'] " + Operator + " " + Comparator + "") == True:
             ListToReturn.append(Player['PlayerID'])
     return ListToReturn
+
+
+def GetAttributeFromPlayer(PlayerID,Attribute):
+    for Player in PlayerList:
+        if Player['PlayerID'] == PlayerID:
+            return(eval("Player['" + Attribute + "']"))
+            break
+
+
+def TryToLynch():
+    global LivingPlayers
+    LivingPlayers = SearchPlayersFor('Alive',"==","'Yes'")
+
+
+def PickNameFromHat(PlayersToGoInHat):
+    Hat = []
+
+
 
 
 InitiateVariables()
