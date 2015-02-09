@@ -21,7 +21,7 @@ DeputyRoleblocker="No"      # "Yes" or "No"
 DeputyBusdriver="No"        # "Yes" or "No"
 DeputyVigilante="No"        # "Yes" or "No"
 DeputyTeamRecruiter="No"    # "Yes" or "No"
-NightKillResistant=0        # -1 (for invulnerable), 0 (for normal), otherwise X-shot
+NightKillResistant=-1        # -1 (for invulnerable), 0 (for normal), otherwise X-shot
 LynchResistant=0            # -1 (for invulnerable), 0 (for normal), otherwise X-shot
 ***                         # Ensure that "***" appears at the end of each player setup
 PlayerID = 2
@@ -47,7 +47,7 @@ DeputyRoleblocker="No"      # "Yes" or "No"
 DeputyBusdriver="No"        # "Yes" or "No"
 DeputyVigilante="No"        # "Yes" or "No"
 DeputyTeamRecruiter="No"    # "Yes" or "No"
-NightKillResistant=0        # -1 (for invulnerable), 0 (for normal), otherwise X-shot
+NightKillResistant=1        # -1 (for invulnerable), 0 (for normal), otherwise X-shot
 LynchResistant=0            # -1 (for invulnerable), 0 (for normal), otherwise X-shot
 ***                         # Ensure that "***" appears at the end of each player setup
 PlayerID = 3
@@ -177,6 +177,6 @@ DeputyRoleblocker="No"      # "Yes" or "No"
 DeputyBusdriver="No"        # "Yes" or "No"
 DeputyVigilante="No"        # "Yes" or "No"
 DeputyTeamRecruiter="No"    # "Yes" or "No"
-NightKillResistant=0        # -1 (for invulnerable), 0 (for normal), otherwise X-shot
+NightKillResistant=1        # -1 (for invulnerable), 0 (for normal), otherwise X-shot
 LynchResistant=0            # -1 (for invulnerable), 0 (for normal), otherwise X-shot
 ***                         # Ensure that "***" appears at the end of each player setup

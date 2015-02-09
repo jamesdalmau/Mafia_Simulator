@@ -87,7 +87,10 @@ def CreatePlayerList():
             exec("PlayerToAdd['" + LineFromTextFile.replace("=", "']="))
 
 
-def SearchPlayersFor(Variable,Operator,Comparator): #When calling this, if Comparator is string, make sure to encase it in single quotes
+def SearchPlayersFor(Variable,Operator,Comparator):
+    #Variable must be a simple string, the name of an item in the Player dictionary
+    #Operator must be "==", "!=", ">", "<" etc
+    #Comparator, if a string, needs to include quotes around itself
     ListToReturn = []
     for Player in PlayerList:
         if eval("Player['" + Variable +"'] " + Operator + " " + Comparator + "") == True:
@@ -97,6 +100,3 @@ def SearchPlayersFor(Variable,Operator,Comparator): #When calling this, if Compa
 
 InitiateVariables()
 CreatePlayerList()
-
-
-
