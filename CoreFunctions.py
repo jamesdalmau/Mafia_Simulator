@@ -1,6 +1,7 @@
 __author__ = 'Unit'
 
 from random import randint  # This gets the function that is used to get a random integer between two numbers
+import random
 
 
 def InitiateVariables():
@@ -100,16 +101,40 @@ def GetAttributeFromPlayer(PlayerID,Attribute):
 
 
 def TryToLynch():
-    global LivingPlayers
-    LivingPlayers = SearchPlayersFor('Alive',"==","'Yes'")
+    Candidates = SearchPlayersFor('Alive',"==","'Yes'")
+    PlayerWhoWillBeLynched = 0
+    while len(Candidates) > 0 and PlayerWhoWillBeLynched == 0:
+        CandidatePickedFromHat = PickNameFromHat(LivingPlayers)
+        if WillGetEnoughLynchVotes(CandidatePickedFromHat) == "Yes":
+            PlayerWhoWillBeLynched = CandidatePickedFromHat
+            print("Lynching " + PlayerWhoWillBeLynched)
+        else:
+            Candidates.remove(CandidatePickedFromHat)
 
 
 def PickNameFromHat(PlayersToGoInHat):
     Hat = []
+    for Player in PlayersToGoInHat:
+        i = 0
+        while i < int(GetAttributeFromPlayer(Player,'NumberOfNamesInHat')):
+            Hat.append(Player)
+            i +=1
+    return(PickRandomItemFromList(Hat))
+
+
+def WillGetEnoughLynchVotes(PlayerID):
+    PossibleVoters = ShuffleList(SearchPlayersFor('PlayerID','!=',PlayerID))
+    Votes = 0
 
 
 
+def ShuffleList(InputList):
+    ReturnList = []
+    for i in range(len(InputList)):
+        element = random.choice(InputList)
+        InputList.remove(element)
+        ReturnList.append(element)
+    return ReturnList
 
 InitiateVariables()
 CreatePlayerList()
-
