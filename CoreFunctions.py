@@ -5,11 +5,25 @@ import random
 import math
 
 
-def InitiateVariables():
+def InitiateGlobalVariables():
+    print("Global variables will be initiated here")
+
+
+def InitiateSingleGameVariables():
     global PlayerID
-    global PlayerList
     PlayerID = 0  # This zeroes the counter that is used by function AddPlayer when populating the player list
+    global PlayerList
     PlayerList = []  # This creates an empty list to fill with players
+    global Day
+    Day = 1
+    global Night
+    Night = 1
+    global DaysThatDoNotHappen
+    DaysThatDoNotHappen = []    #This is needed for the Beloved Princess
+    global NightsOnWhichThereAreNoKills
+    NightsOnWhichThereAreNoKills = []   #This is needed for the Virgin
+    global WinningTeam
+    WinningTeam = ''
 
 
 def IsNumberOddOrEven(NumberToTest):  # Useful for determining whether a day or a night is odd or even
@@ -116,12 +130,51 @@ def TryToLynch():
         #print ("The current candidates for the lynch are " + str(Candidates))
         CandidatePickedFromHat = PickNameFromHat(Candidates)
         #print ("Going to see if there are enough votes for " + str(CandidatePickedFromHat))
-        if WillGetEnoughLynchVotes(CandidatePickedFromHat) == "Yes":    # See if this candidate gets enough votes
+        GetsEnoughVotes, ActualVoters = WillGetEnoughLynchVotes(CandidatePickedFromHat)
+        if GetsEnoughVotes == "Yes":    # See if this candidate gets enough votes
             PlayerWhoWillBeLynched = CandidatePickedFromHat
         else:
             Candidates.remove(CandidatePickedFromHat)   # If there aren't enough votes for the candidate, knock the candidate off the list
     if PlayerWhoWillBeLynched != 0:
-        #print("Lynching " + str(PlayerWhoWillBeLynched))
+        Lynch(PlayerWhoWillBeLynched,ActualVoters)
+        if GetAttributeFromPlayer(PlayerWhoWillBeLynched,'Alive') == 'No':  #If the lynch worked
+            PunishAndRewardVotersAfterLynch(ActualVoters,PlayerWhoWillBeLynched)
+
+
+def Lynch(PlayerID,ActualVoters):
+    if GetAttributeFromPlayer(PlayerID,'LynchResistant') == 0:  #If player isn't lynch resistant
+        KillPlayer(PlayerID)    #This will not kill a Judas or Saulus
+        if GetAttributeFromPlayer(PlayerID,'Alive') == 'No':    #If the player actually died
+            if GetAttributeFromPlayer(PlayerID,'LynchBomb') == 'Yes':   #If player is a lynchbomb
+                KillPlayer(PickRandomItemFromList(ActualVoters))   #Kill random voter
+    else:
+        #If player is lynch resistant, reduce that lynch resistance by one
+        WriteAttributeToPlayer(PlayerID,'LynchResistant',int(GetAttributeFromPlayer(PlayerID,'LynchResistant'))-1)
+
+
+def KillPlayer(PlayerID):
+    if GetAttributeFromPlayer(PlayerID,'Judas') == 'Yes' and GetAttributeFromPlayer(PlayerID,'Alignment') == 'Town': #If Player is a Judas
+        WriteAttributeToPlayer(PlayerID,'Alignment','Mafia')
+    elif GetAttributeFromPlayer(PlayerID,'Saulus') == 'Yes' and GetAttributeFromPlayer(PlayerID,'Alignment') == 'Mafia': #If Player is a Saulus
+        WriteAttributeToPlayer(PlayerID,'Alignment','Town')
+    else:   #If player is neither Judas nor Saulus (or is, but has used that power)
+        WriteAttributeToPlayer(PlayerID,'Alive','No')   #kill player
+        if GetAttributeFromPlayer(PlayerID,'BelovedPrincess') == 'Yes': # If player is a Beloved Princess
+            global DaysThatDoNotHappen
+            DaysThatDoNotHappen.append(Day+1)
+
+
+def PunishAndRewardVotersAfterLynch(Voters,LynchedPlayer):
+    AlignmentOfDeadPlayer = GetAttributeFromPlayer(LynchedPlayer,'Alignment')
+    for Voter in Voters:
+        if AlignmentOfDeadPlayer == 'Mafia':
+            ChangeToNumberOfNamesInHat = math.ceil(Day * 1.5 * randint(3,5))
+            WriteAttributeToPlayer(Voter,'NumberOfNamesInHat',GetAttributeFromPlayer(Voter,'NumberOfNamesInHat')-ChangeToNumberOfNamesInHat)
+        elif AlignmentOfDeadPlayer == 'Town':
+            ChangeToNumberOfNamesInHat = math.ceil(Day * 1.5 * randint(3,5))
+            WriteAttributeToPlayer(Voter,'NumberOfNamesInHat',GetAttributeFromPlayer(Voter,'NumberOfNamesInHat')+ChangeToNumberOfNamesInHat)
+        #print("Player " + str(Voter) + "'s odds are now " + str(GetAttributeFromPlayer(Voter,'NumberOfNamesInHat')))
+
 
 
 def PickNameFromHat(PlayersToGoInHat):
@@ -138,17 +191,19 @@ def WillGetEnoughLynchVotes(TargetPlayerID):
     LivingPlayers = SearchPlayersFor('PlayerID','!=',str(TargetPlayerID))
     NotTargetPlayers = SearchPlayersFor('Alive','==',"'Yes'")
     PossibleVoters = ShuffleList(ReturnOneListWithCommonItemsFromTwoLists(LivingPlayers,NotTargetPlayers))
+    ActualVoters = []
     #print("Going to see if the following players will vote 'yes': " + str(PossibleVoters))
     Votes = 0
     for Player in PossibleVoters:
         #print("Going to see if the following player will vote 'yes': " + str(Player))
         if DoesPlayer1VoteForPlayer2(Player,TargetPlayerID) == 'Yes':
+            ActualVoters.append(Player)
             Votes += 1
             #print("Player " + str(Player) + " will vote yes, bringing the total votes to " + str(Votes))
             if Votes >= NumberOfVotesRequiredToLynch():
-                #print("That's enough for a lynch!")
-                return('Yes')
-    return('No')
+                print("That's enough for a lynch! The people voting are " + str(ActualVoters))
+                return('Yes',ActualVoters)
+    return('No',[])
 
 
 def DoesPlayer1VoteForPlayer2(Player1,Player2):
@@ -163,8 +218,10 @@ def DoesPlayer1VoteForPlayer2(Player1,Player2):
                 AnswerToReturn='No'
     return(AnswerToReturn)
 
+
 def NumberOfVotesRequiredToLynch():
     return(math.ceil(float(len(SearchPlayersFor('Alive','==',"'Yes'")))/2))
+
 
 def ShuffleList(InputList):
     ReturnList = []
@@ -174,6 +231,35 @@ def ShuffleList(InputList):
         ReturnList.append(element)
     return ReturnList
 
-InitiateVariables()
-CreatePlayerList()
-TryToLynch()
+
+def CheckForVictory():
+    ## this is wrong but anyway
+
+    global WinningTeam
+
+    LivingPlayers = SearchPlayersFor('PlayerID','!=',str(TargetPlayerID))
+    MafiaPlayers = SearchPlayersFor('Alignment','==',"'Mafia'")
+    LivingMafiaPlayers = ShuffleList(ReturnOneListWithCommonItemsFromTwoLists(LivingPlayers,NotTargetPlayers))
+
+    LivingPlayers = SearchPlayersFor('PlayerID','!=',str(TargetPlayerID))
+    TownPlayers = SearchPlayersFor('Alignment','==',"'Town'")
+    LivingTownPlayers = ShuffleList(ReturnOneListWithCommonItemsFromTwoLists(LivingPlayers,NotTargetPlayers))
+
+    if Len(LivingPlayers) == 2:
+        WinningTeam = "Neither"
+    elif LivingMafiaPlayers == 0:
+        WinningTeam = "Town"
+    elif LivingTownPlayers == 0:
+        WinningTeam = "Mafia"
+
+def SimulateSingleGame():
+    InitiateSingleGameVariables()
+    CreatePlayerList()
+    global Day
+    global Night
+    global WinningTeam
+    while WinningTeam == ''
+        TryToLynch()
+        Day += 1
+        CheckForVictory()
+    print("Winners = " + WinningTeam)
