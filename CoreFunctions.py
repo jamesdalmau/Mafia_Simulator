@@ -2,6 +2,7 @@ __author__ = 'Unit'
 
 from random import randint  # This gets the function that is used to get a random integer between two numbers
 import random
+import math
 
 
 def InitiateVariables():
@@ -111,13 +112,16 @@ def WriteAttributeToPlayer(PlayerID,Attribute,ValueToWrite):
 def TryToLynch():
     Candidates = SearchPlayersFor('Alive',"==","'Yes'")
     PlayerWhoWillBeLynched = 0
-    while len(Candidates) > 0 and PlayerWhoWillBeLynched == 0:
-        CandidatePickedFromHat = PickNameFromHat(LivingPlayers)
-        if WillGetEnoughLynchVotes(CandidatePickedFromHat) == "Yes":
+    while len(Candidates) > 0 and PlayerWhoWillBeLynched == 0:  # While there are still candidates and no one has been voted for
+        #print ("The current candidates for the lynch are " + str(Candidates))
+        CandidatePickedFromHat = PickNameFromHat(Candidates)
+        #print ("Going to see if there are enough votes for " + str(CandidatePickedFromHat))
+        if WillGetEnoughLynchVotes(CandidatePickedFromHat) == "Yes":    # See if this candidate gets enough votes
             PlayerWhoWillBeLynched = CandidatePickedFromHat
-            print("Lynching " + PlayerWhoWillBeLynched)
         else:
-            Candidates.remove(CandidatePickedFromHat)
+            Candidates.remove(CandidatePickedFromHat)   # If there aren't enough votes for the candidate, knock the candidate off the list
+    if PlayerWhoWillBeLynched != 0:
+        #print("Lynching " + str(PlayerWhoWillBeLynched))
 
 
 def PickNameFromHat(PlayersToGoInHat):
@@ -130,11 +134,37 @@ def PickNameFromHat(PlayersToGoInHat):
     return(PickRandomItemFromList(Hat))
 
 
-def WillGetEnoughLynchVotes(PlayerID):
-    PossibleVoters = ShuffleList(SearchPlayersFor('PlayerID','!=',PlayerID))
+def WillGetEnoughLynchVotes(TargetPlayerID):
+    LivingPlayers = SearchPlayersFor('PlayerID','!=',str(TargetPlayerID))
+    NotTargetPlayers = SearchPlayersFor('Alive','==',"'Yes'")
+    PossibleVoters = ShuffleList(ReturnOneListWithCommonItemsFromTwoLists(LivingPlayers,NotTargetPlayers))
+    #print("Going to see if the following players will vote 'yes': " + str(PossibleVoters))
     Votes = 0
+    for Player in PossibleVoters:
+        #print("Going to see if the following player will vote 'yes': " + str(Player))
+        if DoesPlayer1VoteForPlayer2(Player,TargetPlayerID) == 'Yes':
+            Votes += 1
+            #print("Player " + str(Player) + " will vote yes, bringing the total votes to " + str(Votes))
+            if Votes >= NumberOfVotesRequiredToLynch():
+                #print("That's enough for a lynch!")
+                return('Yes')
+    return('No')
 
 
+def DoesPlayer1VoteForPlayer2(Player1,Player2):
+    AnswerToReturn = 'Yes'    # The default assumption is that the vote will be cast.
+    # First test to see if the vote will be nullified because of teams
+    if (GetAttributeFromPlayer(Player1,'Team') != 0) and (GetAttributeFromPlayer(Player1,'Team') == GetAttributeFromPlayer(Player2,'Team')):
+        if GetAttributeFromPlayer(Player1,'Alignment') == 'Mafia':
+            if randint(1,3) != 1:   # Mafia that are on the same team only have a 33% chance of voting for each other
+                AnswerToReturn='No'
+        elif GetAttributeFromPlayer(Player1,'Alignment') == 'Town':
+            if randint(1,50) != 1:   # Town that are on the same team only have a 2% chance of voting for each other
+                AnswerToReturn='No'
+    return(AnswerToReturn)
+
+def NumberOfVotesRequiredToLynch():
+    return(math.ceil(float(len(SearchPlayersFor('Alive','==',"'Yes'")))/2))
 
 def ShuffleList(InputList):
     ReturnList = []
@@ -146,5 +176,4 @@ def ShuffleList(InputList):
 
 InitiateVariables()
 CreatePlayerList()
-print(GetAttributeFromPlayer(1,'Alignment'))
-print(GetAttributeFromPlayer(1,'Alignment'))
+TryToLynch()

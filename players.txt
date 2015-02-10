@@ -1,6 +1,6 @@
 PlayerID = 1
 Alignment="Town"            # "Town" or "Mafia" or "Neither"
-Team=0                      # 0 (for no team) or the number of the team (Town and Mafia team numbers must be different)
+Team=0                      # 0 (for no team) or the number of the team (Town and Mafia team numbers must be different, Mafia is generally all on the same team)
 Survivor="No"               # "Yes" or "No" (If yes, Alignment should be "Neither" and Team should be 0)
 BelovedPrincess="No"        # "Yes" or "No" (If yes, Alignment should be "Town")
 LynchBomb="No"              # "Yes" or "No"
@@ -26,7 +26,7 @@ LynchResistant=0            # -1 (for invulnerable), 0 (for normal), otherwise X
 ***                         # Ensure that "***" appears at the end of each player setup
 PlayerID = 2
 Alignment="Town"            # "Town" or "Mafia" or "Neither"
-Team=0                      # 0 (for no team) or the number of the team (Town and Mafia team numbers must be different)
+Team=0                      # 0 (for no team) or the number of the team (Town and Mafia team numbers must be different, Mafia is generally all on the same team)
 Survivor="No"               # "Yes" or "No" (If yes, Alignment should be "Neither" and Team should be 0)
 BelovedPrincess="No"        # "Yes" or "No" (If yes, Alignment should be "Town")
 LynchBomb="No"              # "Yes" or "No"
@@ -52,7 +52,7 @@ LynchResistant=0            # -1 (for invulnerable), 0 (for normal), otherwise X
 ***                         # Ensure that "***" appears at the end of each player setup
 PlayerID = 3
 Alignment="Town"            # "Town" or "Mafia" or "Neither"
-Team=0                      # 0 (for no team) or the number of the team (Town and Mafia team numbers must be different)
+Team=0                      # 0 (for no team) or the number of the team (Town and Mafia team numbers must be different, Mafia is generally all on the same team)
 Survivor="No"               # "Yes" or "No" (If yes, Alignment should be "Neither" and Team should be 0)
 BelovedPrincess="No"        # "Yes" or "No" (If yes, Alignment should be "Town")
 LynchBomb="No"              # "Yes" or "No"
@@ -78,7 +78,7 @@ LynchResistant=0            # -1 (for invulnerable), 0 (for normal), otherwise X
 ***                         # Ensure that "***" appears at the end of each player setup
 PlayerID = 4
 Alignment="Town"            # "Town" or "Mafia" or "Neither"
-Team=0                      # 0 (for no team) or the number of the team (Town and Mafia team numbers must be different)
+Team=0                      # 0 (for no team) or the number of the team (Town and Mafia team numbers must be different, Mafia is generally all on the same team)
 Survivor="No"               # "Yes" or "No" (If yes, Alignment should be "Neither" and Team should be 0)
 BelovedPrincess="No"        # "Yes" or "No" (If yes, Alignment should be "Town")
 LynchBomb="No"              # "Yes" or "No"
@@ -104,7 +104,7 @@ LynchResistant=0            # -1 (for invulnerable), 0 (for normal), otherwise X
 ***                         # Ensure that "***" appears at the end of each player setup
 PlayerID = 5
 Alignment="Mafia"            # "Town" or "Mafia" or "Neither"
-Team=0                      # 0 (for no team) or the number of the team (Town and Mafia team numbers must be different)
+Team=1                      # 0 (for no team) or the number of the team (Town and Mafia team numbers must be different, Mafia is generally all on the same team)
 Survivor="No"               # "Yes" or "No" (If yes, Alignment should be "Neither" and Team should be 0)
 BelovedPrincess="No"        # "Yes" or "No" (If yes, Alignment should be "Town")
 LynchBomb="No"              # "Yes" or "No"
@@ -130,8 +130,7 @@ LynchResistant=0            # -1 (for invulnerable), 0 (for normal), otherwise X
 ***                         # Ensure that "***" appears at the end of each player setup
 PlayerID = 6
 Alignment="Town"            # "Town" or "Mafia" or "Neither"
-Team=0                      # 0 (for no team) or the number of the team (Town and Mafia team numbers must be different)
-Survivor="No"               # "Yes" or "No" (If yes, Alignment should be "Neither" and Team should be 0)
+Team=0                      # 0 (for no team) or the number of the team (Town and Mafia team numbers must be different, Mafia is generally all on the same team)Survivor="No"               # "Yes" or "No" (If yes, Alignment should be "Neither" and Team should be 0)
 BelovedPrincess="No"        # "Yes" or "No" (If yes, Alignment should be "Town")
 LynchBomb="No"              # "Yes" or "No"
 NightBomb="No"              # "Yes" or "No"
@@ -156,7 +155,7 @@ LynchResistant=0            # -1 (for invulnerable), 0 (for normal), otherwise X
 ***                         # Ensure that "***" appears at the end of each player setup
 PlayerID = 7
 Alignment="Mafia"            # "Town" or "Mafia" or "Neither"
-Team=0                      # 0 (for no team) or the number of the team (Town and Mafia team numbers must be different)
+Team=1                      # 0 (for no team) or the number of the team (Town and Mafia team numbers must be different, Mafia is generally all on the same team)
 Survivor="No"               # "Yes" or "No" (If yes, Alignment should be "Neither" and Team should be 0)
 BelovedPrincess="No"        # "Yes" or "No" (If yes, Alignment should be "Town")
 LynchBomb="No"              # "Yes" or "No"
