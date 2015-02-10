@@ -100,6 +100,14 @@ def GetAttributeFromPlayer(PlayerID,Attribute):
             break
 
 
+def WriteAttributeToPlayer(PlayerID,Attribute,ValueToWrite):
+    global PlayerList
+    for Player in PlayerList:
+        if Player['PlayerID'] == PlayerID:
+            Player[Attribute] = ValueToWrite
+            break
+
+
 def TryToLynch():
     Candidates = SearchPlayersFor('Alive',"==","'Yes'")
     PlayerWhoWillBeLynched = 0
@@ -138,3 +146,5 @@ def ShuffleList(InputList):
 
 InitiateVariables()
 CreatePlayerList()
+print(GetAttributeFromPlayer(1,'Alignment'))
+print(GetAttributeFromPlayer(1,'Alignment'))
