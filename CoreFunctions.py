@@ -188,8 +188,8 @@ def PickNameFromHat(PlayersToGoInHat):
 
 
 def WillGetEnoughLynchVotes(TargetPlayerID):
-    LivingPlayers = SearchPlayersFor('PlayerID','!=',str(TargetPlayerID))
-    NotTargetPlayers = SearchPlayersFor('Alive','==',"'Yes'")
+    NotTargetPlayers = SearchPlayersFor('PlayerID','!=',str(TargetPlayerID))
+    LivingPlayers = SearchPlayersFor('Alive','==',"'Yes'")
     PossibleVoters = ShuffleList(ReturnOneListWithCommonItemsFromTwoLists(LivingPlayers,NotTargetPlayers))
     ActualVoters = []
     #print("Going to see if the following players will vote 'yes': " + str(PossibleVoters))
@@ -201,7 +201,7 @@ def WillGetEnoughLynchVotes(TargetPlayerID):
             Votes += 1
             #print("Player " + str(Player) + " will vote yes, bringing the total votes to " + str(Votes))
             if Votes >= NumberOfVotesRequiredToLynch():
-                print("That's enough for a lynch! The people voting are " + str(ActualVoters))
+                print("That's enough for a lynch! The lynched player is " + str(TargetPlayerID) + " and the people voting are " + str(ActualVoters))
                 return('Yes',ActualVoters)
     return('No',[])
 
@@ -237,19 +237,18 @@ def CheckForVictory():
 
     global WinningTeam
 
-    LivingPlayers = SearchPlayersFor('PlayerID','!=',str(TargetPlayerID))
+    LivingPlayers = SearchPlayersFor('Alive','==',"'Yes'")
     MafiaPlayers = SearchPlayersFor('Alignment','==',"'Mafia'")
-    LivingMafiaPlayers = ShuffleList(ReturnOneListWithCommonItemsFromTwoLists(LivingPlayers,NotTargetPlayers))
-
-    LivingPlayers = SearchPlayersFor('PlayerID','!=',str(TargetPlayerID))
+    LivingMafiaPlayers = ShuffleList(ReturnOneListWithCommonItemsFromTwoLists(LivingPlayers,MafiaPlayers))
     TownPlayers = SearchPlayersFor('Alignment','==',"'Town'")
-    LivingTownPlayers = ShuffleList(ReturnOneListWithCommonItemsFromTwoLists(LivingPlayers,NotTargetPlayers))
+    LivingTownPlayers = ShuffleList(ReturnOneListWithCommonItemsFromTwoLists(LivingPlayers,TownPlayers))
 
-    if Len(LivingPlayers) == 2:
-        WinningTeam = "Neither"
-    elif LivingMafiaPlayers == 0:
+    if len(LivingMafiaPlayers) == 0:
         WinningTeam = "Town"
-    elif LivingTownPlayers == 0:
+    elif len(LivingTownPlayers) == 0:
+        WinningTeam = "Mafia"
+
+    if len(LivingPlayers) == 2 and WinningTeam == '':
         WinningTeam = "Mafia"
 
 def SimulateSingleGame():
@@ -258,8 +257,12 @@ def SimulateSingleGame():
     global Day
     global Night
     global WinningTeam
-    while WinningTeam == ''
+    while WinningTeam == '':
         TryToLynch()
         Day += 1
         CheckForVictory()
+    LivingPlayers = SearchPlayersFor('Alive','==',"'Yes'")
+    print("The remaining living players are " + str(LivingPlayers))
     print("Winners = " + WinningTeam)
+
+SimulateSingleGame()
