@@ -232,23 +232,37 @@ def ShuffleList(InputList):
     return ReturnList
 
 
+def SeeIfAnyOneScumTeamHasTheMajority():
+    LivingPlayers = SearchPlayersFor('Alive',"==","'Yes'")
+    ScumTeams = []
+    Majority = NumberOfVotesRequiredToLynch()
+    for Player in LivingPlayers:
+        if GetAttributeFromPlayer(Player,'Alignment') == 'Scum':
+            TeamNumberForThisPlayer = GetAttributeFromPlayer(Player,'Team')
+            if TeamNumberForThisPlayer != 0:
+                if TeamNumberForThisPlayer not in ScumTeams:
+                    ScumTeams.append(Player['Team'])
+    for TeamNumber in ScumTeams:
+        ListOfLivingPlayersInTeam = ReturnOneListWithCommonItemsFromTwoLists(SearchPlayersFor('Alive',"==","'Yes'"), SearchPlayersFor('Team',"==",TeamNumber))
+        if len(ListOfLivingPlayersInTeam) >= Majority:
+            return('Yes')
+    return('No')
+
+
 def CheckForVictory():
-    ## this is wrong but anyway
-
     global WinningTeam
-
     LivingPlayers = SearchPlayersFor('Alive','==',"'Yes'")
     MafiaPlayers = SearchPlayersFor('Alignment','==',"'Mafia'")
     LivingMafiaPlayers = ShuffleList(ReturnOneListWithCommonItemsFromTwoLists(LivingPlayers,MafiaPlayers))
     TownPlayers = SearchPlayersFor('Alignment','==',"'Town'")
     LivingTownPlayers = ShuffleList(ReturnOneListWithCommonItemsFromTwoLists(LivingPlayers,TownPlayers))
-
     if len(LivingMafiaPlayers) == 0:
         WinningTeam = "Town"
     elif len(LivingTownPlayers) == 0:
         WinningTeam = "Mafia"
-
-    if len(LivingPlayers) == 2 and WinningTeam == '':
+    elif SeeIfAnyOneScumTeamHasTheMajority() == 'Yes':
+        WinningTeam = "Mafia"
+    if WinningTeam == '' and len(LivingPlayers) == 2:
         WinningTeam = "Mafia"
 
 def SimulateSingleGame():
@@ -261,6 +275,8 @@ def SimulateSingleGame():
         TryToLynch()
         Day += 1
         CheckForVictory()
+        LivingPlayers = SearchPlayersFor('Alive','==',"'Yes'")
+        print("The remaining living players are " + str(LivingPlayers))
     LivingPlayers = SearchPlayersFor('Alive','==',"'Yes'")
     print("The remaining living players are " + str(LivingPlayers))
     print("Winners = " + WinningTeam)
