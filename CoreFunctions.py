@@ -9,7 +9,7 @@ def InitiateGlobalVariables():
     print("Global variables will be initiated here")
 
 
-def InitiateSingleGameVariables():
+def InitiateSingleGameVariables(): # Set up variables to run a single game
     global PlayerID
     PlayerID = 0  # This zeroes the counter that is used by function AddPlayer when populating the player list
     global PlayerList
@@ -33,7 +33,7 @@ def IsNumberOddOrEven(NumberToTest):  # Useful for determining whether a day or 
         return 'Odd'
 
 
-def ReturnOneListWithCommonItemsFromTwoLists(List1, List2):
+def ReturnOneListWithCommonItemsFromTwoLists(List1, List2): # Pure list function
     ReturningList = []
     for i in List2:
         if List1.count(i) > 0:
@@ -41,19 +41,19 @@ def ReturnOneListWithCommonItemsFromTwoLists(List1, List2):
     return ReturningList
 
 
-def ReturnOneListWithCommonItemsFromThreeLists(List1, List2, List3):
+def ReturnOneListWithCommonItemsFromThreeLists(List1, List2, List3):    # Pure list function
     return ReturnOneListWithCommonItemsFromTwoLists(ReturnOneListWithCommonItemsFromTwoLists(List1, List2),List3)
 
 
-def ReturnOneListWithCommonItemsFromFourLists(List1, List2, List3, List4):
+def ReturnOneListWithCommonItemsFromFourLists(List1, List2, List3, List4):  # Pure list function
     return ReturnOneListWithCommonItemsFromTwoLists(ReturnOneListWithCommonItemsFromThreeLists(List1,List2,List3),List4)
 
 
-def PickRandomItemFromList(List1):
+def PickRandomItemFromList(List1):  # Pure list function
     return List1[randint(0, len(List1) - 1)]
 
 
-def CreatePlayerList():
+def CreatePlayerList(): # Reads players.txt and makes the main list for use in a single game
     global PlayerList
     PlayerID=1
     PlayerSetupFile = list(open('players.txt', 'r')) #Read players.txt and create a list
@@ -97,7 +97,7 @@ def CreatePlayerList():
             exec("PlayerToAdd['" + LineFromTextFile.replace("=", "']="))
 
 
-def SearchPlayersFor(Variable,Operator,Comparator):
+def SearchPlayersFor(Variable,Operator,Comparator): # Return a list of PlayerIDs for players who match criteria
     #Variable must be a simple string, the name of an item in the Player dictionary
     #Operator must be "==", "!=", ">", "<" etc
     #Comparator, if a string, needs to include quotes around itself
@@ -108,14 +108,14 @@ def SearchPlayersFor(Variable,Operator,Comparator):
     return ListToReturn
 
 
-def GetAttributeFromPlayer(PlayerID,Attribute):
+def GetAttributeFromPlayer(PlayerID,Attribute): # Get a value from an attribute belonging to a particular player
     for Player in PlayerList:
         if Player['PlayerID'] == PlayerID:
             return(eval("Player['" + Attribute + "']"))
             break
 
 
-def WriteAttributeToPlayer(PlayerID,Attribute,ValueToWrite):
+def WriteAttributeToPlayer(PlayerID,Attribute,ValueToWrite): # Change an attribute for a particular player
     global PlayerList
     for Player in PlayerList:
         if Player['PlayerID'] == PlayerID:
@@ -166,14 +166,29 @@ def KillPlayer(PlayerID):
 
 def PunishAndRewardVotersAfterLynch(Voters,LynchedPlayer):
     AlignmentOfDeadPlayer = GetAttributeFromPlayer(LynchedPlayer,'Alignment')
+    #Punish and reward the voters
     for Voter in Voters:
         if AlignmentOfDeadPlayer == 'Mafia':
-            ChangeToNumberOfNamesInHat = math.ceil(Day * 1.5 * randint(3,5))
+            ChangeToNumberOfNamesInHat = math.ceil(Day * 1.3 * randint(3,5))
             WriteAttributeToPlayer(Voter,'NumberOfNamesInHat',GetAttributeFromPlayer(Voter,'NumberOfNamesInHat')-ChangeToNumberOfNamesInHat)
+            print("Player " + str(Voter) + " voted to lynch a scum. Their odds are now " + str(GetAttributeFromPlayer(Voter,'NumberOfNamesInHat')))
         elif AlignmentOfDeadPlayer == 'Town':
-            ChangeToNumberOfNamesInHat = math.ceil(Day * 1.5 * randint(3,5))
+            ChangeToNumberOfNamesInHat = math.ceil(Day * 1.3 * randint(3,5))
             WriteAttributeToPlayer(Voter,'NumberOfNamesInHat',GetAttributeFromPlayer(Voter,'NumberOfNamesInHat')+ChangeToNumberOfNamesInHat)
-        #print("Player " + str(Voter) + "'s odds are now " + str(GetAttributeFromPlayer(Voter,'NumberOfNamesInHat')))
+            print("Player " + str(Voter) + " voted to lynch a town. Their odds are now " + str(GetAttributeFromPlayer(Voter,'NumberOfNamesInHat')))
+    #Punish and reward the non-voters
+    NonVoters = SearchPlayersFor('Alive','==','"Yes"')
+    for NonVoter in NonVoters:
+        if NonVoter != LynchedPlayer:
+            if NonVoter not in Voters:
+                if AlignmentOfDeadPlayer == 'Mafia':
+                    ChangeToNumberOfNamesInHat = math.ceil(Day * 1.3 * randint(2,4))
+                    WriteAttributeToPlayer(NonVoter,'NumberOfNamesInHat',GetAttributeFromPlayer(NonVoter,'NumberOfNamesInHat')+ChangeToNumberOfNamesInHat)
+                    print("Player " + str(NonVoter) + " didn't vote to lynch a scum. Their odds are now " + str(GetAttributeFromPlayer(NonVoter,'NumberOfNamesInHat')))
+                elif AlignmentOfDeadPlayer == 'Town':
+                    ChangeToNumberOfNamesInHat = math.ceil(Day * 1.3 * randint(2,4))
+                    WriteAttributeToPlayer(NonVoter,'NumberOfNamesInHat',GetAttributeFromPlayer(NonVoter,'NumberOfNamesInHat')-ChangeToNumberOfNamesInHat)
+                    print("Player " + str(NonVoter) + " didn't vote to lynch a town. Their odds are now " + str(GetAttributeFromPlayer(NonVoter,'NumberOfNamesInHat')))
 
 
 
@@ -201,7 +216,7 @@ def WillGetEnoughLynchVotes(TargetPlayerID):
             Votes += 1
             #print("Player " + str(Player) + " will vote yes, bringing the total votes to " + str(Votes))
             if Votes >= NumberOfVotesRequiredToLynch():
-                print("That's enough for a lynch! The lynched player is " + str(TargetPlayerID) + " and the people voting are " + str(ActualVoters))
+                print("They're lynching player " + str(TargetPlayerID) + " and the people voting are " + str(ActualVoters))
                 return('Yes',ActualVoters)
     return('No',[])
 
@@ -268,11 +283,15 @@ def CheckForVictory():
 def SimulateSingleGame():
     InitiateSingleGameVariables()
     CreatePlayerList()
+    global DaysThatDoNotHappen
     global Day
     global Night
     global WinningTeam
     while WinningTeam == '':
-        TryToLynch()
+        print()
+        print("Day " + str(Day))
+        if not Day in DaysThatDoNotHappen:
+            TryToLynch()
         Day += 1
         CheckForVictory()
         LivingPlayers = SearchPlayersFor('Alive','==',"'Yes'")
