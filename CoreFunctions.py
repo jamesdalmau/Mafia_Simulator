@@ -74,15 +74,15 @@ def CreatePlayerList(): # Reads players.txt and makes the main list for use in a
     Judas=""                  # "Yes" or "No" (If yes, Alignment should be "Town")
     Cop=""                    # "Yes", "Odd", "Even" or "No" --- note, must add record of who the cop has investigated
     Doctor=""                 # "Yes", "Odd", "Even" or "No"
-    Roleblocker=""            # "Yes", "Odd", "Even" or "No"
-    Busdriver=""              # "Yes", "Odd", "Even" or "No"
+    RoleBlocker=""            # "Yes", "Odd", "Even" or "No"
+    BusDriver=""              # "Yes", "Odd", "Even" or "No"
     Vigilante=""              # "Yes", "Odd", "Even" or "No"
     TeamRecruiter=""          # "Yes" or "No" (If yes, Alignment should be "Town")
     TeamNightKill=""          # "Yes", "Odd", "Even" or "No" (If Alignment is "Mafia", should ordinarily not be "No")
     DeputyCop=""              # "Yes" or "No"
     DeputyDoctor=""           # "Yes" or "No"
-    DeputyRoleblocker=""      # "Yes" or "No"
-    DeputyBusdriver=""        # "Yes" or "No"
+    DeputyRoleBlocker=""      # "Yes" or "No"
+    DeputyBusDriver=""        # "Yes" or "No"
     DeputyVigilante=""        # "Yes" or "No"
     DeputyTeamRecruiter=""    # "Yes" or "No"
     NightKillResistant=""        # -1 (for invulnerable), 0 (for normal), otherwise X-shot
@@ -445,62 +445,90 @@ def SimulateSingleGame():
 
 
 def NightRoutine():
-    DoAllRoleblocking()
-    DoAllBusdriving()
-    #DoAllInvestigating()
-    #DoAllProtecting()
-    DoAllTeamNightKills()
-    #DoAllVigilanteKills()
+    global PlayersBeingRoleBlocked
+    global BusDrivings
+    global Investigations
+    global TeamNightKills
+    global VigilanteKills
+    global PlayersBeingDoctored
+    global PlayersBeingInvestigated
+    ReceiveRoleBlockingActions()
+    ReceiveBusDrivingActions()
+    ReceiveCopActions()
+    ReceiveDoctorActions()
+    ReceiveTeamNightKillActions()
+    ReceiveVigilanteKillActions()
 
 
-def DoAllRoleblocking():
-    global PlayersBeingRoleblocked
+def FindBusDrivingPairs(PlayerID):
+    ReturnedPlayerIDs = []
+    global BusDrivings
+    if BusDrivings == []:
+        return([PlayerID])
+    else:
+        for BusDriving in BusDrivings:
+            if BusDriving[0] == PlayerID:
+                ReturnedPlayerIDs.append(BusDriving[1])
+            elif BusDriving[1] == PlayerID:
+                ReturnedPlayerIDs.append(BusDriving[0])
+    return(ReturnedPlayerIDs)
+
+
+def ReceiveRoleBlockingActions():
+    global PlayersBeingRoleBlocked
     global Night
-    PlayersBeingRoleblocked = []
-    LivingRoleblockers = ReturnOneListWithCommonItemsFromTwoLists(SearchPlayersFor('Alive','==',"'Yes'"),SearchPlayersFor("Roleblocker","!=","'No'"))
-    if LivingRoleblockers != []: #If there are any roleblockers
-        for Player in LivingRoleblockers:
-            RoleblockerActiveTonight = "No"
+    PlayersBeingRoleBlocked = []
+    LivingRoleBlockers = ReturnOneListWithCommonItemsFromTwoLists(SearchPlayersFor('Alive','==',"'Yes'"),SearchPlayersFor("RoleBlocker","!=","'No'"))
+    if LivingRoleBlockers != []: #If there are any roleblockers
+        for Player in LivingRoleBlockers:
+            RoleBlockerActiveTonight = "No"
             #See if this roleblocker is to be active on this particular night
-            RoleblockerValueFromPlayerlist = GetAttributeFromPlayer(Player,"Roleblocker")
-            if RoleblockerValueFromPlayerlist == "Yes":
-                RoleblockerActiveTonight = "Yes"
-            elif RoleblockerValueFromPlayerlist == IsNumberOddOrEven(Night):
-                RoleblockerActiveTonight = "Yes"
-            if RoleblockerActiveTonight == "Yes":
+            RoleBlockerValueFromPlayerlist = GetAttributeFromPlayer(Player,"RoleBlocker")
+            if RoleBlockerValueFromPlayerlist == "Yes":
+                RoleBlockerActiveTonight = "Yes"
+            elif RoleBlockerValueFromPlayerlist == IsNumberOddOrEven(Night):
+                RoleBlockerActiveTonight = "Yes"
+            if RoleBlockerActiveTonight == "Yes":
                 if GetAttributeFromPlayer(Player,'Alignment') == 'Mafia':
-                    PlayerToBeRoleblocked = TryToPickTownPlayer(Player,[])
+                    PlayerToBeRoleBlocked = TryToPickTownPlayer(Player,[])
                 else:
-                    PlayerToBeRoleblocked = TryToPickMafiaPlayer(Player,[])
-                if PlayersBeingRoleblocked != 0:
-                    PlayersBeingRoleblocked.append(PlayerToBeRoleblocked)
-                    print("On this night, Player " + str(Player) + " is roleblocking " + str(PlayerToBeRoleblocked))
+                    PlayerToBeRoleBlocked = TryToPickMafiaPlayer(Player,[])
+                if PlayersBeingRoleBlocked != 0:
+                    PlayersBeingRoleBlocked.append(PlayerToBeRoleBlocked)
+                    print("On this night, Player " + str(Player) + " is roleblocking " + str(PlayerToBeRoleBlocked))
 
 
-def DoAllBusdriving():
-    global Busdrivings
-    Busdrivings = []
-    LivingBusdrivers = ReturnOneListWithCommonItemsFromTwoLists(SearchPlayersFor('Alive','==',"'Yes'"),SearchPlayersFor("Busdriver","!=","'No'"))
-    if LivingBusdrivers != []: #If there are any Busdrivers
-        for Busdriver in LivingBusdrivers:
-            BusdriverActiveTonight = "No"
-            #See if this Busdriver is to be active on this particular night
-            BusdriverValueFromPlayerlist = GetAttributeFromPlayer(Busdriver,"Busdriver")
-            if BusdriverValueFromPlayerlist == "Yes":
-                BusdriverActiveTonight = "Yes"
-            elif BusdriverValueFromPlayerlist == IsNumberOddOrEven(Night):
-                BusdriverActiveTonight = "Yes"
-            if Busdriver in PlayersBeingRoleblocked: #Busdriver is inactive if roleblocked
-                BusdriverActiveTonight = "No"
-            if BusdriverActiveTonight == "Yes":
-                BusdrivenPlayer1 = TryToPickMafiaPlayer(Busdriver,[])
-                BusdrivenPlayer2 = TryToPickTownPlayer(Busdriver,[])
-                if (BusdrivenPlayer1 != 0) and (BusdrivenPlayer2 != 0):
-                    Busdrivings.append([BusdrivenPlayer1,BusdrivenPlayer2])
-                    print("On this night, Player " + str(Busdriver) + " is busdriving Player " + str(BusdrivenPlayer1) + " and Player " + str(BusdrivenPlayer2))
+def ReceiveBusDrivingActions():
+    global BusDrivings
+    BusDrivings = []
+    LivingBusDrivers = ReturnOneListWithCommonItemsFromTwoLists(SearchPlayersFor('Alive','==',"'Yes'"),SearchPlayersFor("BusDriver","!=","'No'"))
+    if LivingBusDrivers != []: #If there are any BusDrivers
+        for BusDriver in LivingBusDrivers:
+            BusDriverActiveTonight = "No"
+            #See if this BusDriver is to be active on this particular night
+            BusDriverValueFromPlayerlist = GetAttributeFromPlayer(BusDriver,"BusDriver")
+            if BusDriverValueFromPlayerlist == "Yes":
+                BusDriverActiveTonight = "Yes"
+            elif BusDriverValueFromPlayerlist == IsNumberOddOrEven(Night):
+                BusDriverActiveTonight = "Yes"
+            if BusDriver in PlayersBeingRoleBlocked: #BusDriver is inactive if roleblocked
+                BusDriverActiveTonight = "No"
+            if BusDriverActiveTonight == "Yes":
+                BusDrivenPlayer1 = TryToPickMafiaPlayer(BusDriver,[])
+                BusDrivenPlayer2 = TryToPickTownPlayer(BusDriver,[])
+                if (BusDrivenPlayer1 != 0) and (BusDrivenPlayer2 != 0):
+                    if BusDrivenPlayer1 > BusDrivenPlayer2:
+                        InsertSlot1 = BusDrivenPlayer2
+                        InsertSlot2 = BusDrivenPlayer1
+                    else:
+                        InsertSlot1 = BusDrivenPlayer1
+                        InsertSlot2 = BusDrivenPlayer2
+                    if [InsertSlot1,InsertSlot2] not in BusDrivings:
+                        BusDrivings.append([BusDrivenPlayer1,BusDrivenPlayer2])
+                        print("On this night, Player " + str(BusDriver) + " is busdriving Player " + str(BusDrivenPlayer1) + " and Player " + str(BusDrivenPlayer2))
 
 
-def DoAllTeamNightKills():
+def ReceiveTeamNightKillActions():
     global TeamNightKills
     TeamNightKills = []
     TeamsStillAlive = BuildListOfTeamNumbers('Mafia') + BuildListOfTeamNumbers('Town')
@@ -510,13 +538,13 @@ def DoAllTeamNightKills():
         if TeamKillers != []:
             ChosenTeamKiller = PickRandomItemFromList(TeamKillers)
             TeamKillerActiveTonight = "No"
-            #See if this Busdriver is to be active on this particular night
+            #See if this TeamKiller is to be active on this particular night
             TeamNightKillValueFromPlayerList = GetAttributeFromPlayer(ChosenTeamKiller,"TeamNightKill")
             if TeamNightKillValueFromPlayerList == "Yes":
                 TeamKillerActiveTonight = "Yes"
             elif TeamNightKillValueFromPlayerList == IsNumberOddOrEven(Night):
                 TeamKillerActiveTonight = "Yes"
-            if ChosenTeamKiller in PlayersBeingRoleblocked: #Busdriver is inactive if roleblocked
+            if ChosenTeamKiller in PlayersBeingRoleBlocked: #Teamkiller is inactive if roleblocked
                 TeamKillerActiveTonight = "No"
             if TeamKillerActiveTonight == "Yes":
                 if GetAttributeFromPlayer(ChosenTeamKiller,'Alignment') == "Mafia":
@@ -525,9 +553,83 @@ def DoAllTeamNightKills():
                     Target = TryToPickMafiaPlayer(ChosenTeamKiller,[])
                 if Target != 0:
                     TeamNightKills.append(Target)
-                    print("On this night, Player " + str(ChosenTeamKiller) + " is NightKilling Player " + str(Target))
+                    print("On this night, Player " + str(ChosenTeamKiller) + " is NightKilling Player " + str(Target) + " for team " + str(Team))
 
 
+def ReceiveVigilanteKillActions():
+    global VigilanteKills
+    VigilanteKills = []
+    Vigilantes = ReturnOneListWithCommonItemsFromTwoLists(SearchPlayersFor("Alive","==","'Yes'"),SearchPlayersFor("Vigilante","!=","'No'"))
+    if Vigilantes != []:
+        for Vigilante in Vigilantes:
+            VigilanteActiveTonight = "No"
+            #See if this Vigilante is to be active on this particular night
+            VigilanteValueFromPlayerList = GetAttributeFromPlayer(Vigilante,"Vigilante")
+            if VigilanteValueFromPlayerList == "Yes":
+                VigilanteActiveTonight = "Yes"
+            elif VigilanteValueFromPlayerList == IsNumberOddOrEven(Night):
+                VigilanteActiveTonight = "Yes"
+            if Vigilante in PlayersBeingRoleBlocked: #BusDriver is inactive if roleblocked
+                VigilanteActiveTonight = "No"
+            if VigilanteActiveTonight == "Yes":
+                if GetAttributeFromPlayer(Vigilante,'Alignment') == "Mafia":
+                    Target = TryToPickTownPlayer(Vigilante,[])
+                else:
+                    Target = TryToPickMafiaPlayer(Vigilante,[])
+                if Target != 0:
+                    VigilanteKills.append(Target)
+                    print("On this night, Player " + str(Vigilante) + " is NightKilling Player " + str(Target) + " as a Vigilante.")
+
+
+def ReceiveDoctorActions():
+    global PlayersBeingDoctored
+    global Night
+    PlayersBeingDoctored = []
+    LivingDoctors = ReturnOneListWithCommonItemsFromTwoLists(SearchPlayersFor('Alive','==',"'Yes'"),SearchPlayersFor("Doctor","!=","'No'"))
+    if LivingDoctors != []: #If there are any Doctors
+        for Doctor in LivingDoctors:
+            DoctorActiveTonight = "No"
+            #See if this Doctor is to be active on this particular night
+            DoctorValueFromPlayerList = GetAttributeFromPlayer(Player,"Doctor")
+            if DoctorValueFromPlayerList == "Yes":
+                DoctorActiveTonight = "Yes"
+            elif DoctorValueFromPlayerList == IsNumberOddOrEven(Night):
+                DoctorActiveTonight = "Yes"
+            if Doctor in PlayersBeingRoleBlocked: #Doctor is inactive if roleblocked
+                DoctorActiveTonight = "No"
+            if DoctorActiveTonight == "Yes":
+                if GetAttributeFromPlayer(Player,'Alignment') == 'Mafia':
+                    PlayerToBeDoctored = TryToPickMafiaPlayer(Player,[])
+                else:
+                    PlayerToBeDoctored = TryToPickTownPlayer(Player,[])
+                if PlayerToBeDoctored != 0:
+                    PlayersBeingDoctored.append(PlayerToBeDoctored)
+                    print("On this night, Player " + str(Doctor) + " is Doctoring " + str(PlayerToBeDoctored))
+
+
+def ReceiveCopActions():
+    global Investigations
+    Investigations = []
+    Cops = ReturnOneListWithCommonItemsFromTwoLists(SearchPlayersFor("Alive","==","'Yes'"),SearchPlayersFor("Cop","!=","'No'"))
+    if Cops != []:
+        for Cop in Cops:
+            CopActiveTonight = "No"
+            #See if this Cop is to be active on this particular night
+            CopValueFromPlayerList = GetAttributeFromPlayer(Cop,"Cop")
+            if CopValueFromPlayerList == "Yes":
+                CopActiveTonight = "Yes"
+            elif CopValueFromPlayerList == IsNumberOddOrEven(Night):
+                CopActiveTonight = "Yes"
+            if Cop in PlayersBeingRoleBlocked: #Cop is inactive if roleblocked
+                CopActiveTonight = "No"
+            if CopActiveTonight == "Yes":
+                if GetAttributeFromPlayer(Cop,'Alignment') == "Mafia":
+                    Target = TryToPickTownPlayer(Cop,[]) # Should exclude players whose investigations are public
+                else:
+                    Target = TryToPickMafiaPlayer(Cop,[]) #Should exclude players whose investigations are public
+                if Target != 0:
+                    Investigations.append({'Cop': Cop, 'Target' : Target})
+                    print("On this night, Player " + str(Cop) + " is Investigating Player " + str(Target) + " as a Vigilante.")
 
 
 InitiateGlobalVariables()
