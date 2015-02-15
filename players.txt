@@ -238,14 +238,14 @@ DeputyBusdriver="No"        # "Yes" or "No"
 DeputyVigilante="No"        # "Yes" or "No"
 DeputyTeamRecruiter="No"    # "Yes" or "No"
 NightKillResistant=0        # -1 (for invulnerable), 0 (for normal), otherwise X-shot
-LynchResistant=0            # -1 (for invulnerable), 0 (for normal), otherwise X-shot
+LynchResistant=1            # -1 (for invulnerable), 0 (for normal), otherwise X-shot
 ***                         # Ensure that "***" appears at the end of each player setup
 PlayerID = 10
 Alignment="Town"            # "Town" or "Mafia" or "Neither"
 Team=0                      # 0 (for no team) or the number of the team (Town and Mafia team numbers must be different, Mafia is generally all on the same team)
 Survivor="No"               # "Yes" or "No" (If yes, Alignment should be "Neither" and Team should be 0)
 BelovedPrincess="No"        # "Yes" or "No" (If yes, Alignment should be "Town")
-LynchBomb="No"              # "Yes" or "No"
+LynchBomb="Yes"              # "Yes" or "No"
 NightBomb="No"              # "Yes" or "No"
 InnocentChild="No"          # "Yes" or "No"
 FriendlyNeighbour="No"      # "Yes", "Odd", "Even" or "No"
@@ -265,7 +265,7 @@ DeputyBusdriver="No"        # "Yes" or "No"
 DeputyVigilante="No"        # "Yes" or "No"
 DeputyTeamRecruiter="No"    # "Yes" or "No"
 NightKillResistant=0        # -1 (for invulnerable), 0 (for normal), otherwise X-shot
-LynchResistant=1            # -1 (for invulnerable), 0 (for normal), otherwise X-shot
+LynchResistant=0            # -1 (for invulnerable), 0 (for normal), otherwise X-shot
 ***                         # Ensure that "***" appears at the end of each player setup
 PlayerID = 11
 Alignment="Town"            # "Town" or "Mafia" or "Neither"

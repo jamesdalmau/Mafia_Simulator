@@ -152,8 +152,9 @@ def Lynch(PlayerID,ActualVoters):
         KillPlayer(PlayerID)    #This will not kill a Judas or Saulus
         if GetAttributeFromPlayer(PlayerID,'Alive') == 'No':    #If the player actually died
             if GetAttributeFromPlayer(PlayerID,'LynchBomb') == 'Yes':   #If player is a lynchbomb
-                print("Player " + PlayerID + " was a lynchbomb.")
-                KillPlayer(PickRandomItemFromList(ActualVoters))   #Kill random voter
+                RandomVoterKilled = PickRandomItemFromList(ActualVoters)
+                print("Player " + str(PlayerID) + " was a lynchbomb. Random voter, Player " + str(RandomVoterKilled) + ", is killed.")
+                KillPlayer(RandomVoterKilled)   #Kill random voter
     else:
         #If player is lynch resistant, reduce that lynch resistance by one
         WriteAttributeToPlayer(PlayerID,'LynchResistant',int(GetAttributeFromPlayer(PlayerID,'LynchResistant'))-1)
@@ -448,7 +449,7 @@ def NightRoutine():
     DoAllBusdriving()
     #DoAllInvestigating()
     #DoAllProtecting()
-    #DoAllTeamNightKills()
+    DoAllTeamNightKills()
     #DoAllVigilanteKills()
 
 
@@ -497,6 +498,37 @@ def DoAllBusdriving():
                 if (BusdrivenPlayer1 != 0) and (BusdrivenPlayer2 != 0):
                     Busdrivings.append([BusdrivenPlayer1,BusdrivenPlayer2])
                     print("On this night, Player " + str(Busdriver) + " is busdriving Player " + str(BusdrivenPlayer1) + " and Player " + str(BusdrivenPlayer2))
+
+
+def DoAllTeamNightKills():
+    global TeamNightKills
+    TeamNightKills = []
+    TeamsStillAlive = BuildListOfTeamNumbers('Mafia') + BuildListOfTeamNumbers('Town')
+    for Team in TeamsStillAlive:
+        TeamKillPlayerPresent = "No"
+        TeamKillers = ReturnOneListWithCommonItemsFromThreeLists(SearchPlayersFor("Alive","==","'Yes'"),SearchPlayersFor("Team","==",Team),SearchPlayersFor("TeamNightKill","!=","'No'"))
+        if TeamKillers != []:
+            ChosenTeamKiller = PickRandomItemFromList(TeamKillers)
+            TeamKillerActiveTonight = "No"
+            #See if this Busdriver is to be active on this particular night
+            TeamNightKillValueFromPlayerList = GetAttributeFromPlayer(ChosenTeamKiller,"TeamNightKill")
+            if TeamNightKillValueFromPlayerList == "Yes":
+                TeamKillerActiveTonight = "Yes"
+            elif TeamNightKillValueFromPlayerList == IsNumberOddOrEven(Night):
+                TeamKillerActiveTonight = "Yes"
+            if ChosenTeamKiller in PlayersBeingRoleblocked: #Busdriver is inactive if roleblocked
+                TeamKillerActiveTonight = "No"
+            if TeamKillerActiveTonight == "Yes":
+                if GetAttributeFromPlayer(ChosenTeamKiller,'Alignment') == "Mafia":
+                    Target = TryToPickTownPlayer(ChosenTeamKiller,[])
+                else:
+                    Target = TryToPickMafiaPlayer(ChosenTeamKiller,[])
+                if Target != 0:
+                    TeamNightKills.append(Target)
+                    print("On this night, Player " + str(ChosenTeamKiller) + " is NightKilling Player " + str(Target))
+
+
+
 
 InitiateGlobalVariables()
 SimulateSingleGame()
