@@ -73,6 +73,7 @@ def CreatePlayerList(): # Reads players.txt and makes the main list for use in a
     Busdriver=""              # "Yes", "Odd", "Even" or "No"
     Vigilante=""              # "Yes", "Odd", "Even" or "No"
     TeamRecruiter=""          # "Yes" or "No" (If yes, Alignment should be "Town")
+    TeamNightKill=""          # "Yes", "Odd", "Even" or "No" (If Alignment is "Mafia", should ordinarily not be "No")
     DeputyCop=""              # "Yes" or "No"
     DeputyDoctor=""           # "Yes" or "No"
     DeputyRoleblocker=""      # "Yes" or "No"
@@ -103,7 +104,7 @@ def SearchPlayersFor(Variable,Operator,Comparator): # Return a list of PlayerIDs
     #Comparator, if a string, needs to include quotes around itself
     ListToReturn = []
     for Player in PlayerList:
-        if eval("Player['" + Variable +"'] " + Operator + " " + Comparator + "") == True:
+        if eval("Player['" + Variable +"'] " + Operator + " " + str(Comparator) + "") == True:
             ListToReturn.append(Player['PlayerID'])
     return ListToReturn
 
@@ -146,10 +147,12 @@ def Lynch(PlayerID,ActualVoters):
         KillPlayer(PlayerID)    #This will not kill a Judas or Saulus
         if GetAttributeFromPlayer(PlayerID,'Alive') == 'No':    #If the player actually died
             if GetAttributeFromPlayer(PlayerID,'LynchBomb') == 'Yes':   #If player is a lynchbomb
+                print("Player " + PlayerID + " was a lynchbomb.")
                 KillPlayer(PickRandomItemFromList(ActualVoters))   #Kill random voter
     else:
         #If player is lynch resistant, reduce that lynch resistance by one
         WriteAttributeToPlayer(PlayerID,'LynchResistant',int(GetAttributeFromPlayer(PlayerID,'LynchResistant'))-1)
+        print("Player was lynch-resistant.")
 
 
 def KillPlayer(PlayerID):
@@ -160,6 +163,7 @@ def KillPlayer(PlayerID):
     else:   #If player is neither Judas nor Saulus (or is, but has used that power)
         WriteAttributeToPlayer(PlayerID,'Alive','No')   #kill player
         if GetAttributeFromPlayer(PlayerID,'BelovedPrincess') == 'Yes': # If player is a Beloved Princess
+            print("Player " + str(PlayerID) + " was a Beloved Princess! Day " + str(Day + 1) + " will be skipped.")
             global DaysThatDoNotHappen
             DaysThatDoNotHappen.append(Day+1)
 
@@ -251,14 +255,16 @@ def SeeIfAnyOneScumTeamHasTheMajority():
     LivingPlayers = SearchPlayersFor('Alive',"==","'Yes'")
     ScumTeams = []
     Majority = NumberOfVotesRequiredToLynch()
-    for Player in LivingPlayers:
-        if GetAttributeFromPlayer(Player,'Alignment') == 'Scum':
+    for Player in LivingPlayers: #Build a list of the scum teams
+        if GetAttributeFromPlayer(Player,'Alignment') == 'Mafia':
             TeamNumberForThisPlayer = GetAttributeFromPlayer(Player,'Team')
             if TeamNumberForThisPlayer != 0:
                 if TeamNumberForThisPlayer not in ScumTeams:
-                    ScumTeams.append(Player['Team'])
-    for TeamNumber in ScumTeams:
+                    ScumTeams.append(GetAttributeFromPlayer(Player,'Team'))
+    print("Seeing if Scum Teams " + str(ScumTeams) + " have " + str(Majority) + " votes.")
+    for TeamNumber in ScumTeams: #See if each scum team has the votes
         ListOfLivingPlayersInTeam = ReturnOneListWithCommonItemsFromTwoLists(SearchPlayersFor('Alive',"==","'Yes'"), SearchPlayersFor('Team',"==",TeamNumber))
+        print("List of living players in team " + str(TeamNumber) +": " + str(ListOfLivingPlayersInTeam))
         if len(ListOfLivingPlayersInTeam) >= Majority:
             return('Yes')
     return('No')
@@ -277,8 +283,7 @@ def CheckForVictory():
         WinningTeam = "Mafia"
     elif SeeIfAnyOneScumTeamHasTheMajority() == 'Yes':
         WinningTeam = "Mafia"
-    if WinningTeam == '' and len(LivingPlayers) == 2:
-        WinningTeam = "Mafia"
+
 
 def SimulateSingleGame():
     InitiateSingleGameVariables()
@@ -297,7 +302,7 @@ def SimulateSingleGame():
         LivingPlayers = SearchPlayersFor('Alive','==',"'Yes'")
         print("The remaining living players are " + str(LivingPlayers))
     LivingPlayers = SearchPlayersFor('Alive','==',"'Yes'")
-    print("The remaining living players are " + str(LivingPlayers))
+    print("")
     print("Winners = " + WinningTeam)
 
 SimulateSingleGame()
