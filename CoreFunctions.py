@@ -16,13 +16,15 @@ def InitiateSingleGameVariables(): # Set up variables to run a single game
     global GlobalPlayerList
     PlayerList = GlobalPlayerList  # This creates a fresh copy of the player list, for use in this specific game
     global Day
-    Day = 1
+    Day = 0
     global Night
-    Night = 1
+    Night = 0
     global DaysThatDoNotHappen
     DaysThatDoNotHappen = []    #This is needed for the Beloved Princess
     global NightsOnWhichThereAreNoKills
     NightsOnWhichThereAreNoKills = []   #This is needed for the Virgin
+    global InvestigationResults
+    InvestigationResults = []
     global WinningTeam
     WinningTeam = ''
 
@@ -66,6 +68,7 @@ def CreatePlayerList(): # Reads players.txt and makes the main list for use in a
     Team=""                      # 0 (for no team) or the number of the team (Town and Mafia team numbers must be different)
     Survivor=""               # "Yes" or "No" (If yes, Alignment should be "Neither" and Team should be 0)
     BelovedPrincess=""        # "Yes" or "No" (If yes, Alignment should be "Town")
+    Virgin=""                 # "Yes" or "No"
     LynchBomb=""              # "Yes" or "No"
     NightBomb=""              # "Yes" or "No"
     InnocentChild=""          # "Yes" or "No"
@@ -142,36 +145,55 @@ def TryToLynch():
         else:
             Candidates.remove(CandidatePickedFromHat)   # If there aren't enough votes for the candidate, knock the candidate off the list
     if PlayerWhoWillBeLynched != 0:
-        Lynch(PlayerWhoWillBeLynched,ActualVoters)
+        KillPlayer(ActualVoters,PlayerWhoWillBeLynched,"Lynch")
         if GetAttributeFromPlayer(PlayerWhoWillBeLynched,'Alive') == 'No':  #If the lynch worked
             PunishAndRewardVotersAfterLynch(ActualVoters,PlayerWhoWillBeLynched)
 
 
-def Lynch(PlayerID,ActualVoters):
-    if GetAttributeFromPlayer(PlayerID,'LynchResistant') == 0:  #If player isn't lynch resistant
-        KillPlayer(PlayerID)    #This will not kill a Judas or Saulus
-        if GetAttributeFromPlayer(PlayerID,'Alive') == 'No':    #If the player actually died
-            if GetAttributeFromPlayer(PlayerID,'LynchBomb') == 'Yes':   #If player is a lynchbomb
-                RandomVoterKilled = PickRandomItemFromList(ActualVoters)
-                print("Player " + str(PlayerID) + " was a lynchbomb. Random voter, Player " + str(RandomVoterKilled) + ", is killed.")
-                KillPlayer(RandomVoterKilled)   #Kill random voter
-    else:
-        #If player is lynch resistant, reduce that lynch resistance by one
-        WriteAttributeToPlayer(PlayerID,'LynchResistant',int(GetAttributeFromPlayer(PlayerID,'LynchResistant'))-1)
-        print("Player was lynch-resistant.")
-
-
-def KillPlayer(PlayerID):
-    if GetAttributeFromPlayer(PlayerID,'Judas') == 'Yes' and GetAttributeFromPlayer(PlayerID,'Alignment') == 'Town': #If Player is a Judas
-        WriteAttributeToPlayer(PlayerID,'Alignment','Mafia')
-    elif GetAttributeFromPlayer(PlayerID,'Saulus') == 'Yes' and GetAttributeFromPlayer(PlayerID,'Alignment') == 'Mafia': #If Player is a Saulus
-        WriteAttributeToPlayer(PlayerID,'Alignment','Town')
-    else:   #If player is neither Judas nor Saulus (or is, but has used that power)
-        WriteAttributeToPlayer(PlayerID,'Alive','No')   #kill player
-        if GetAttributeFromPlayer(PlayerID,'BelovedPrincess') == 'Yes': # If player is a Beloved Princess
-            print("Player " + str(PlayerID) + " was a Beloved Princess! Day " + str(Day + 1) + " will be skipped.")
-            global DaysThatDoNotHappen
-            DaysThatDoNotHappen.append(Day+1)
+def KillPlayer(Killer,Victim,KillType):
+    print("Killer = " + str(Killer))
+    print("Victim = " + str(Victim))
+    print("KillType = " + str(KillType))
+    ResistancesOvercome = "No" #Test resistances first
+    if KillType == "Lynch":
+        if GetAttributeFromPlayer(Victim,'LynchResistant') != 0:  #If player is lynch resistant
+            WriteAttributeToPlayer(Victim,'LynchResistant',int(GetAttributeFromPlayer(Victim,'LynchResistant'))-1)
+            print("Player was lynch-resistant.")
+        else:
+            ResistancesOvercome = "Yes"
+    elif KillType == "Night":
+        if GetAttributeFromPlayer(Victim,'NightKillResistant') != 0:  #If player is NK resistant
+            #print ("So here's the victim id: " + str(Victim))
+            #print ("So here's the NKR: " + str(GetAttributeFromPlayer(Victim,'NightKillResistant')))
+            WriteAttributeToPlayer(Victim,'NightKillResistant',int(GetAttributeFromPlayer(Victim,'NightKillResistant'))-1)
+            print("Player was night-kill-resistant.")
+        else:
+            ResistancesOvercome = "Yes"
+    if ResistancesOvercome == "Yes": #Proceed if resistances are overcome
+        KillBecomesConvert = "No"   #Check whether kill fails because player is Judas or Saulus
+        if GetAttributeFromPlayer(Victim,'Judas') == 'Yes' and GetAttributeFromPlayer(Victim,'Alignment') == 'Town': #If Player is a Judas
+            WriteAttributeToPlayer(Victim,'Alignment','Mafia')
+            KillBecomesConvert = "Yes"
+        elif GetAttributeFromPlayer(Victim,'Saulus') == 'Yes' and GetAttributeFromPlayer(Victim,'Alignment') == 'Mafia': #If Player is a Saulus
+            WriteAttributeToPlayer(Victim,'Alignment','Town')
+            KillBecomesConvert = "Yes"
+        if KillBecomesConvert == "No": #Proceed if kill wasn't converted
+            WriteAttributeToPlayer(Victim,'Alive','No')   #kill player
+            if GetAttributeFromPlayer(Victim,'BelovedPrincess') == 'Yes': # If player is a Beloved Princess
+                print("Player " + str(Victim) + " was a Beloved Princess! Day " + str(Day + 1) + " will be skipped.")
+                global DaysThatDoNotHappen
+                DaysThatDoNotHappen.append(Day+1)
+            if GetAttributeFromPlayer(Victim,'Virgin') == "Yes": # If player is a Virgin
+                print("Player " + str(Victim) + " was a Virgin! There can be no night kills on " + str(Night + 1) + ".")
+                global NightsOnWhichThereAreNoKills
+                NightsOnWhichThereAreNoKills.append(Night+1)
+            if KillType == 'Lynch' and GetAttributeFromPlayer(Victim,'LynchBomb') == 'Yes':
+                RandomVoterKilled = PickRandomItemFromList(Killer)
+                print("Player " + str(Victim) + " was a LynchBomb. Random voter, Player " + str(RandomVoterKilled) + ", is targeted by the bomb.")
+                KillPlayer(Victim,[RandomVoterKilled],'LynchBomb')   #Kill random voter
+            elif KillType == 'Night' and GetAttributeFromPlayer(Victim,'NightBomb') == 'Yes':
+                print("Player " + str(Victim) + " was a NightBomb. Their killer, Player " + str(Killer[0]) + ", is targeted by the bomb.")
+                KillPlayer(Victim,Killer,'NightBomb')   #Kill killer
 
 
 def PunishAndRewardVotersAfterLynch(Voters,LynchedPlayer):
@@ -286,7 +308,6 @@ def TryToPickMafiaPlayer(PlayerWhoIsChoosing,PlayersNotEligible):
                 PlayersToGoInHat.append(UnfilteredPlayer)
     else:
         PlayersToGoInHat = UnfilteredListOfPlayersForHat
-    print("Trying to find a mafia player, list in hat is " + str(PlayersToGoInHat))
     for PlayerInHat in PlayersToGoInHat: #Now go through each player who's going into the hat
         NumberOfNamesFromPlayerList = int(GetAttributeFromPlayer(PlayerInHat,'NumberOfNamesInHat'))
         if GetAttributeFromPlayer(PlayerInHat,'InnocentChild') == "Yes": #Exclude any innocent children
@@ -384,7 +405,7 @@ def SeeIfAnyOneMafiaTeamHasTheMajority():
     LivingPlayers = SearchPlayersFor('Alive',"==","'Yes'")
     Majority = NumberOfVotesRequiredToLynch()
     MafiaTeams = BuildListOfTeamNumbers("Mafia")
-    print("Seeing if any one MafiaTeam out of Teams " + str(MafiaTeams) + " have " + str(Majority) + " votes.")
+    print("Seeing if any one MafiaTeam out of Teams " + str(MafiaTeams) + " has " + str(Majority) + " votes.")
     for TeamNumber in MafiaTeams: #See if each scum team has the votes
         ListOfLivingPlayersInTeam = ReturnOneListWithCommonItemsFromTwoLists(SearchPlayersFor('Alive',"==","'Yes'"), SearchPlayersFor('Team',"==",TeamNumber))
         print("List of living players in team " + str(TeamNumber) +": " + str(ListOfLivingPlayersInTeam))
@@ -408,6 +429,21 @@ def CheckForVictory():
         WinningTeam = "Mafia"
 
 
+def ConsiderRevealingInvestigations():
+    global InvestigationResults
+    for Result in InvestigationResults:
+        if Result['Revealed'] == 'No':
+            if GetAttributeFromPlayer(Result['Cop'],'Alive') == "Yes":
+                if randint(1,5) < 4: #Replace this code with something proper
+                    #Assuming that only town can be cops
+                    Result['Revealed'] = "Yes"
+                    WriteAttributeToPlayer(Result['Cop'],'NumberOfNamesInHat',10)
+                    if Result['Alignment'] == "Town":
+                        WriteAttributeToPlayer(Result['Target'],'NumberOfNamesInHat',10)
+                    if Result['Alignment'] == "Mafia":
+                        WriteAttributeToPlayer(Result['Target'],'NumberOfNamesInHat',300)
+                    print("Player " + str(Result['Cop']) + " just revealed that they investigated Player " + str(Result['Target']) + " and found that they are " + Result['Alignment'])
+
 def SimulateSingleGame():
     InitiateSingleGameVariables()
     global DaysThatDoNotHappen
@@ -415,10 +451,13 @@ def SimulateSingleGame():
     global Night
     global WinningTeam
     while WinningTeam == '':
+        Day += 1
+        Night += 1
         #Day cycle
         print()
         print("Day " + str(Day))
         if not Day in DaysThatDoNotHappen:
+            ConsiderRevealingInvestigations()
             TryToLynch()
         CheckForVictory()
         LivingPlayers = SearchPlayersFor('Alive','==',"'Yes'")
@@ -426,7 +465,6 @@ def SimulateSingleGame():
         if WinningTeam != '':
             DayOrNightWhenGameEnded = "D" + str(Day)
         else:   #If no winning team at the end of the day, do the night
-            Day += 1
             #Night cycle
             print()
             print("Night " + str(Night))
@@ -436,9 +474,6 @@ def SimulateSingleGame():
                 DayOrNightWhenGameEnded = "N" + str(Night)
             LivingPlayers = SearchPlayersFor('Alive','==',"'Yes'")
             print("The remaining living players at the end of Night " + str(Night) + " are " + str(LivingPlayers))
-            Night += 1
-
-
     LivingPlayers = SearchPlayersFor('Alive','==',"'Yes'")
     print()
     print("Winners = " + WinningTeam)
@@ -447,17 +482,71 @@ def SimulateSingleGame():
 def NightRoutine():
     global PlayersBeingRoleBlocked
     global BusDrivings
-    global Investigations
-    global TeamNightKills
-    global VigilanteKills
-    global PlayersBeingDoctored
-    global PlayersBeingInvestigated
+    global ThisTurnsInvestigationActions
+    global InvestigationResults
+    global TeamNightKillActions
+    global VigilanteActions
+    global PlayersTargetedByDoctors
+    global PlayersProtectedByDoctors
+    global ActualNightKills
+    global NightsOnWhichThereAreNoKills
+    PlayersBeingRoleBlocked =[]
+    PlayersProtectedByDoctors = []
+    ThisTurnsInvestigationActions = []
+    ActualNightKills = []
     ReceiveRoleBlockingActions()
     ReceiveBusDrivingActions()
     ReceiveCopActions()
     ReceiveDoctorActions()
     ReceiveTeamNightKillActions()
     ReceiveVigilanteKillActions()
+    ProcessCopActions()
+    ProcessDoctorActions()
+    ProcessTeamNightKillActions()
+    ProcessVigilanteKillActions()
+    if Night not in NightsOnWhichThereAreNoKills:
+        for ActualNightKill in ActualNightKills:
+            print("Player " + str(ActualNightKill['Killer']) + " is night killing " + str(ActualNightKill['Victim']))
+            KillPlayer(ActualNightKill['Killer'],ActualNightKill['Victim'],'Night')
+
+
+def ProcessDoctorActions():
+    global PlayersTargetedByDoctors
+    global PlayersProtectedByDoctors
+    for Target in PlayersTargetedByDoctors:
+        ProtectionsResultingFromBusDriving = FindBusDrivingPairs(Target)
+        for Protection in ProtectionsResultingFromBusDriving:
+            PlayersProtectedByDoctors.append(Target)
+
+
+def ProcessVigilanteKillActions():
+    global VigilanteActions
+    global ActualNightKills
+    global PlayersProtectedByDoctors
+    for VigilanteKill in VigilanteActions:
+        DeathsResultingFromBusDriving = FindBusDrivingPairs(VigilanteKill['Victim'])
+        for Death in DeathsResultingFromBusDriving:
+            if Death not in PlayersProtectedByDoctors:
+                ActualNightKills.append({'Killer': VigilanteKill['Killer'], 'Victim': Death})
+
+
+def ProcessCopActions(): 
+    global InvestigationResults
+    global ThisTurnsInvestigationActions
+    for Investigation in ThisTurnsInvestigationActions:
+        ActualTarget = FindBusDrivingPairs(Investigation['Target'])
+        if Len(ActualTarget) == 1: #Investigation fails if busdriving means there's multiple targets
+            InvestigationResults.append({'Cop':Investigation['Cop'],'Target':Investigation['Target'],'Alignment':GetAttributeFromPlayer(ActualTarget(0),'Alignment'),'Revealed':'No'})
+
+
+def ProcessTeamNightKillActions():
+    global TeamNightKillActions
+    global ActualNightKills
+    for TeamNightKill in TeamNightKillActions:
+        DeathsResultingFromBusDriving = FindBusDrivingPairs(TeamNightKill['Victim'])
+        for Death in DeathsResultingFromBusDriving:
+            if Death not in PlayersProtectedByDoctors:
+                ActualNightKills.append({'Killer': TeamNightKill['Killer'], 'Victim': Death})
 
 
 def FindBusDrivingPairs(PlayerID):
@@ -529,8 +618,8 @@ def ReceiveBusDrivingActions():
 
 
 def ReceiveTeamNightKillActions():
-    global TeamNightKills
-    TeamNightKills = []
+    global TeamNightKillActions
+    TeamNightKillActions = []
     TeamsStillAlive = BuildListOfTeamNumbers('Mafia') + BuildListOfTeamNumbers('Town')
     for Team in TeamsStillAlive:
         TeamKillPlayerPresent = "No"
@@ -552,13 +641,13 @@ def ReceiveTeamNightKillActions():
                 else:
                     Target = TryToPickMafiaPlayer(ChosenTeamKiller,[])
                 if Target != 0:
-                    TeamNightKills.append(Target)
+                    TeamNightKillActions.append({'Killer': ChosenTeamKiller,'Victim': Target})
                     print("On this night, Player " + str(ChosenTeamKiller) + " is NightKilling Player " + str(Target) + " for team " + str(Team))
 
 
 def ReceiveVigilanteKillActions():
-    global VigilanteKills
-    VigilanteKills = []
+    global VigilanteActions
+    VigilanteActions = []
     Vigilantes = ReturnOneListWithCommonItemsFromTwoLists(SearchPlayersFor("Alive","==","'Yes'"),SearchPlayersFor("Vigilante","!=","'No'"))
     if Vigilantes != []:
         for Vigilante in Vigilantes:
@@ -577,14 +666,14 @@ def ReceiveVigilanteKillActions():
                 else:
                     Target = TryToPickMafiaPlayer(Vigilante,[])
                 if Target != 0:
-                    VigilanteKills.append(Target)
+                    VigilanteActions.append({'Killer': Vigilante,'Victim': Target})
                     print("On this night, Player " + str(Vigilante) + " is NightKilling Player " + str(Target) + " as a Vigilante.")
 
 
 def ReceiveDoctorActions():
-    global PlayersBeingDoctored
+    global PlayersTargetedByDoctors
     global Night
-    PlayersBeingDoctored = []
+    PlayersTargetedByDoctors = []
     LivingDoctors = ReturnOneListWithCommonItemsFromTwoLists(SearchPlayersFor('Alive','==',"'Yes'"),SearchPlayersFor("Doctor","!=","'No'"))
     if LivingDoctors != []: #If there are any Doctors
         for Doctor in LivingDoctors:
@@ -603,16 +692,30 @@ def ReceiveDoctorActions():
                 else:
                     PlayerToBeDoctored = TryToPickTownPlayer(Player,[])
                 if PlayerToBeDoctored != 0:
-                    PlayersBeingDoctored.append(PlayerToBeDoctored)
+                    PlayersTargetedByDoctors.append(PlayerToBeDoctored)
                     print("On this night, Player " + str(Doctor) + " is Doctoring " + str(PlayerToBeDoctored))
 
 
 def ReceiveCopActions():
-    global Investigations
-    Investigations = []
+    global ThisTurnsInvestigationActions
+    global RevealedInvestigations
+    global UnrevealedInvestigations
+    ThisTurnsInvestigationActions = []
+    NoPlayerWillInvestigate = []
+    #Build a list of people who will not be investigated because they already have been
+    if len(RevealedInvestigations) > 0:
+        for Investigation in RevealedInvestigation:
+            NoPlayerWillInvestigate.append(Investigation('Target'))
+    #Build a list of cops who will be asked for night actions
     Cops = ReturnOneListWithCommonItemsFromTwoLists(SearchPlayersFor("Alive","==","'Yes'"),SearchPlayersFor("Cop","!=","'No'"))
     if Cops != []:
         for Cop in Cops:
+            #Build a list of people who this cop has already investigated (but hasn't passed on)
+            ThisPlayerWillNotInvestigate = []
+            if len(UnrevealedInvestigations) > 0:
+                for Investigation in UnrevealedInvestigations:
+                    if Investigation('Cop') == Cop:
+                        ThisPlayerWillNotInvestigate.append(Investigation('Target'))
             CopActiveTonight = "No"
             #See if this Cop is to be active on this particular night
             CopValueFromPlayerList = GetAttributeFromPlayer(Cop,"Cop")
@@ -623,12 +726,13 @@ def ReceiveCopActions():
             if Cop in PlayersBeingRoleBlocked: #Cop is inactive if roleblocked
                 CopActiveTonight = "No"
             if CopActiveTonight == "Yes":
+                ExcludedPlayers = NoPlayerWillInvestigate + ThisPlayerWillNotInvestigate
                 if GetAttributeFromPlayer(Cop,'Alignment') == "Mafia":
-                    Target = TryToPickTownPlayer(Cop,[]) # Should exclude players whose investigations are public
+                    Target = TryToPickTownPlayer(Cop,ExcludedPlayers)
                 else:
-                    Target = TryToPickMafiaPlayer(Cop,[]) #Should exclude players whose investigations are public
+                    Target = TryToPickMafiaPlayer(Cop,ExcludedPlayers)
                 if Target != 0:
-                    Investigations.append({'Cop': Cop, 'Target' : Target})
+                    ThisTurnsInvestigationActions.append({'Cop': Cop, 'Target' : Target})
                     print("On this night, Player " + str(Cop) + " is Investigating Player " + str(Target) + " as a Vigilante.")
 
 
