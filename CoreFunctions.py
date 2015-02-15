@@ -6,14 +6,15 @@ import math
 
 
 def InitiateGlobalVariables():
-    print("Global variables will be initiated here")
+    CreatePlayerList()
 
 
 def InitiateSingleGameVariables(): # Set up variables to run a single game
     global PlayerID
     PlayerID = 0  # This zeroes the counter that is used by function AddPlayer when populating the player list
     global PlayerList
-    PlayerList = []  # This creates an empty list to fill with players
+    global GlobalPlayerList
+    PlayerList = GlobalPlayerList  # This creates a fresh copy of the player list, for use in this specific game
     global Day
     Day = 1
     global Night
@@ -54,7 +55,8 @@ def PickRandomItemFromList(List1):  # Pure list function
 
 
 def CreatePlayerList(): # Reads players.txt and makes the main list for use in a single game
-    global PlayerList
+    global GlobalPlayerList
+    GlobalPlayerList = []
     PlayerID=1
     PlayerSetupFile = list(open('players.txt', 'r')) #Read players.txt and create a list
     Alignment=""            # "Town" or "Mafia" or "Neither"
@@ -91,7 +93,7 @@ def CreatePlayerList(): # Reads players.txt and makes the main list for use in a
                 PlayerToAdd['NumberOfNamesInHat'] = 0
             else:
                 PlayerToAdd['NumberOfNamesInHat'] = 100
-            PlayerList.append(PlayerToAdd.copy())  # Add PlayerToAdd to the global PlayerList list
+            GlobalPlayerList.append(PlayerToAdd.copy())  # Add PlayerToAdd to the global PlayerList list
             PlayerID += 1
             PlayerToAdd.clear() # Empty PlayerToAdd so that the next player can be assembled
         else:   # If the line is not "***", interpret the line to add it to the PlayerToAdd dictionary
@@ -251,18 +253,24 @@ def ShuffleList(InputList):
     return ReturnList
 
 
-def SeeIfAnyOneScumTeamHasTheMajority():
+def BuildListOfMafiaTeamNumbers():   #Return a list of the numbers of the scum teams that have living players
     LivingPlayers = SearchPlayersFor('Alive',"==","'Yes'")
-    ScumTeams = []
-    Majority = NumberOfVotesRequiredToLynch()
+    MafiaTeams = []
     for Player in LivingPlayers: #Build a list of the scum teams
         if GetAttributeFromPlayer(Player,'Alignment') == 'Mafia':
             TeamNumberForThisPlayer = GetAttributeFromPlayer(Player,'Team')
             if TeamNumberForThisPlayer != 0:
-                if TeamNumberForThisPlayer not in ScumTeams:
-                    ScumTeams.append(GetAttributeFromPlayer(Player,'Team'))
-    print("Seeing if Scum Teams " + str(ScumTeams) + " have " + str(Majority) + " votes.")
-    for TeamNumber in ScumTeams: #See if each scum team has the votes
+                if TeamNumberForThisPlayer not in MafiaTeams:
+                    MafiaTeams.append(GetAttributeFromPlayer(Player,'Team'))
+    return(MafiaTeams)
+
+
+def SeeIfAnyOneMafiaTeamHasTheMajority():
+    LivingPlayers = SearchPlayersFor('Alive',"==","'Yes'")
+    Majority = NumberOfVotesRequiredToLynch()
+    MafiaTeams = BuildListOfMafiaTeamNumbers()
+    print("Seeing if any one MafiaTeam out of Teams " + str(MafiaTeams) + " have " + str(Majority) + " votes.")
+    for TeamNumber in MafiaTeams: #See if each scum team has the votes
         ListOfLivingPlayersInTeam = ReturnOneListWithCommonItemsFromTwoLists(SearchPlayersFor('Alive',"==","'Yes'"), SearchPlayersFor('Team',"==",TeamNumber))
         print("List of living players in team " + str(TeamNumber) +": " + str(ListOfLivingPlayersInTeam))
         if len(ListOfLivingPlayersInTeam) >= Majority:
@@ -281,28 +289,43 @@ def CheckForVictory():
         WinningTeam = "Town"
     elif len(LivingTownPlayers) == 0:
         WinningTeam = "Mafia"
-    elif SeeIfAnyOneScumTeamHasTheMajority() == 'Yes':
+    elif SeeIfAnyOneMafiaTeamHasTheMajority() == 'Yes':
         WinningTeam = "Mafia"
 
 
 def SimulateSingleGame():
     InitiateSingleGameVariables()
-    CreatePlayerList()
     global DaysThatDoNotHappen
     global Day
     global Night
     global WinningTeam
     while WinningTeam == '':
+        #Day cycle
         print()
         print("Day " + str(Day))
         if not Day in DaysThatDoNotHappen:
             TryToLynch()
-        Day += 1
         CheckForVictory()
         LivingPlayers = SearchPlayersFor('Alive','==',"'Yes'")
-        print("The remaining living players are " + str(LivingPlayers))
+        print("The remaining living players at the end of Day " + str(Day) + " are " + str(LivingPlayers))
+        if WinningTeam != '':
+            DayOrNightWhenGameEnded = "D" + str(Day)
+        else:   #If no winning team at the end of the day, do the night
+            Day += 1
+            #Night cycle
+            print()
+            print("Night " + str(Night))
+            CheckForVictory()
+            if WinningTeam != '':
+                DayOrNightWhenGameEnded = "N" + str(Night)
+            LivingPlayers = SearchPlayersFor('Alive','==',"'Yes'")
+            print("The remaining living players at the end of Night " + str(Night) + " are " + str(LivingPlayers))
+            Night += 1
+
+
     LivingPlayers = SearchPlayersFor('Alive','==',"'Yes'")
-    print("")
+    print()
     print("Winners = " + WinningTeam)
 
+InitiateGlobalVariables()
 SimulateSingleGame()
