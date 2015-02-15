@@ -285,13 +285,14 @@ def TryToPickMafiaPlayer(PlayerWhoIsChoosing,PlayersNotEligible):
                 PlayersToGoInHat.append(UnfilteredPlayer)
     else:
         PlayersToGoInHat = UnfilteredListOfPlayersForHat
+    print("Trying to find a mafia player, list in hat is " + str(PlayersToGoInHat))
     for PlayerInHat in PlayersToGoInHat: #Now go through each player who's going into the hat
         NumberOfNamesFromPlayerList = int(GetAttributeFromPlayer(PlayerInHat,'NumberOfNamesInHat'))
-        if GetAttributeFromPlayer(PlayerInHat,'InnocentChild') != "Yes": #Exclude any innocent children
+        if GetAttributeFromPlayer(PlayerInHat,'InnocentChild') == "Yes": #Exclude any innocent children
             NumberOfTimesToGoInHat = 0
         else:
             if PlayersTeam != 0: # if the player is on a team
-                if PlayersTeam == int(GetAttributeFromPlayer(PlayerInHat,"'Team'")): #if the candidate is on the same team
+                if PlayersTeam == int(GetAttributeFromPlayer(PlayerInHat,"Team")): #if the candidate is on the same team
                     if PlayersAlignment == "Town":
                         NumberOfNamesFromPlayerList = 0
                     elif PlayersAlignment == "Mafia":
@@ -444,7 +445,7 @@ def SimulateSingleGame():
 
 def NightRoutine():
     DoAllRoleblocking()
-    #DoAllBusdriving()
+    DoAllBusdriving()
     #DoAllInvestigating()
     #DoAllProtecting()
     #DoAllTeamNightKills()
@@ -473,28 +474,29 @@ def DoAllRoleblocking():
                 if PlayersBeingRoleblocked != 0:
                     PlayersBeingRoleblocked.append(PlayerToBeRoleblocked)
                     print("On this night, Player " + str(Player) + " is roleblocking " + str(PlayerToBeRoleblocked))
-        print("The following players are being roleblocked = " + str(PlayersBeingRoleblocked))
 
 
 def DoAllBusdriving():
     global Busdrivings
     Busdrivings = []
-    LivingBusdrivers = ReturnOneListWithCommonItemsFromTwoLists(SearchPlayersFor('Alive','==',"'Yes'"),SearchPlayersFor("Busdriver","==","'Yes'"))
+    LivingBusdrivers = ReturnOneListWithCommonItemsFromTwoLists(SearchPlayersFor('Alive','==',"'Yes'"),SearchPlayersFor("Busdriver","!=","'No'"))
     if LivingBusdrivers != []: #If there are any Busdrivers
-        for Player in LivingBusdrivers:
+        for Busdriver in LivingBusdrivers:
             BusdriverActiveTonight = "No"
             #See if this Busdriver is to be active on this particular night
-            BusdriverValueFromPlayerlist = GetAttributeFromPlayer(Player,"Busdriver")
+            BusdriverValueFromPlayerlist = GetAttributeFromPlayer(Busdriver,"Busdriver")
             if BusdriverValueFromPlayerlist == "Yes":
                 BusdriverActiveTonight = "Yes"
             elif BusdriverValueFromPlayerlist == IsNumberOddOrEven(Night):
                 BusdriverActiveTonight = "Yes"
-            if Player in PlayersBeingRoleblocked:
+            if Busdriver in PlayersBeingRoleblocked: #Busdriver is inactive if roleblocked
                 BusdriverActiveTonight = "No"
             if BusdriverActiveTonight == "Yes":
-                PlayerToBeRoleblocked = PickNameFromHatForRoleblock(Player)
-                PlayersBeingRoleblocked.append(PlayerToBeRoleblocked)
-                print("On this night, Player " + str(Player) + " is roleblocking " + str(PlayerToBeRoleblocked))
+                BusdrivenPlayer1 = TryToPickMafiaPlayer(Busdriver,[])
+                BusdrivenPlayer2 = TryToPickTownPlayer(Busdriver,[])
+                if (BusdrivenPlayer1 != 0) and (BusdrivenPlayer2 != 0):
+                    Busdrivings.append([BusdrivenPlayer1,BusdrivenPlayer2])
+                    print("On this night, Player " + str(Busdriver) + " is busdriving Player " + str(BusdrivenPlayer1) + " and Player " + str(BusdrivenPlayer2))
 
 InitiateGlobalVariables()
 SimulateSingleGame()
