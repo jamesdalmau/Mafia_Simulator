@@ -59,41 +59,55 @@ def PickRandomItemFromList(List1):  # Pure list function
         return()
 
 
+def ReturnBlankPlayer(PlayerID):
+    PlayerToReturn = {}
+    PlayerToReturn['PlayerID'] = PlayerID
+    PlayerToReturn['Alignment'] = 'None'            # "Town" or "Mafia" or "None"
+    PlayerToReturn['Team'] = 0                      # 0 (for no team) or the number of the team (Town and Mafia team numbers must be different)
+    PlayerToReturn['BelovedPrincess'] = 'No'        # "Yes" or "No" (If yes, Alignment should be "Town")
+    PlayerToReturn['Virgin'] = 'No'                 # "Yes" or "No"
+    PlayerToReturn['LynchBomb'] = 'No'              # "Yes" or "No"
+    PlayerToReturn['NightBomb'] = 'No'              # "Yes" or "No"
+    PlayerToReturn['InnocentChild'] = 'No'          # "Yes" or "No"
+    PlayerToReturn['Saulus'] = 'No'                 # "Yes" or "No" (If yes, Alignment should be "Mafia" and Team should be 0)
+    PlayerToReturn['Judas'] = 'No'                  # "Yes" or "No" (If yes, Alignment should be "Town")
+    PlayerToReturn['FriendlyNeighbour'] = 'No'      # "Yes", "Odd", "Even" or "No"
+    PlayerToReturn['FriendlyNeighbourShots'] = -1      # if -1, unlimited. Otherwise, # of possible investigations
+    PlayerToReturn['Cop'] = 'No'                    # "Yes", "Odd", "Even" or "No" --- note, must add record of who the cop has investigated
+    PlayerToReturn['CopShots'] = -1             # if -1, unlimited. Otherwise, # of possible investigations
+    PlayerToReturn['Doctor'] = 'No'                 # "Yes", "Odd", "Even" or "No"
+    PlayerToReturn['DoctorShots'] = -1          # if -1, unlimited. Otherwise, # of possible doctorings
+    PlayerToReturn['RoleBlocker'] = 'No'            # "Yes", "Odd", "Even" or "No"
+    PlayerToReturn['RoleBlockerShots'] = -1     # if -1, unlimited. Otherwise, # of possible roleblockings
+    PlayerToReturn['BusDriver'] = 'No'              # "Yes", "Odd", "Even" or "No"
+    PlayerToReturn['BusDriverShots'] = -1       # if -1, unlimited. Otherwise, # of possible busdrivings
+    PlayerToReturn['Vigilante'] = 'No'              # "Yes", "Odd", "Even" or "No"
+    PlayerToReturn['VigilanteShots'] = -1       # if -1, unlimited. Otherwise, # of possible vig kills
+    PlayerToReturn['TeamRecruiter'] = 'No'          # "Yes" or "No" (If yes, Alignment should be "Town")
+    PlayerToReturn['TeamNightKill'] = 'No'          # "Yes", "Odd", "Even" or "No" (If Alignment is "Mafia", should ordinarily not be "No")
+    PlayerToReturn['TeamNightKillShots'] = -1   # if -1, unlimited. Otherwise, # of possible team night kills
+    PlayerToReturn['DeputyCop'] = 'No'              # "Yes" or "No"
+    PlayerToReturn['DeputyDoctor'] = 'No'           # "Yes" or "No"
+    PlayerToReturn['DeputyRoleBlocker'] = 'No'      # "Yes" or "No"
+    PlayerToReturn['DeputyBusDriver'] = 'No'        # "Yes" or "No"
+    PlayerToReturn['DeputyVigilante'] = 'No'        # "Yes" or "No"
+    PlayerToReturn['DeputyTeamRecruiter'] = 'No'    # "Yes" or "No"
+    PlayerToReturn['NightKillResistant'] = 0        # -1 (for invulnerable), 0 (for normal), otherwise X-shot
+    PlayerToReturn['LynchResistant'] = 0            # -1 (for invulnerable), 0 (for normal), otherwise X-shot
+    return(PlayerToReturn)
+
+
 def CreatePlayerList(): # Reads players.txt and makes the main list for use in a single game
     global GlobalPlayerList
     GlobalPlayerList = []
     PlayerID=1
     PlayerSetupFile = list(open('players.txt', 'r')) #Read players.txt and create a list
-    Alignment=""            # "Town" or "Mafia" or "Neither"
-    Team=""                      # 0 (for no team) or the number of the team (Town and Mafia team numbers must be different)
-    Survivor=""               # "Yes" or "No" (If yes, Alignment should be "Neither" and Team should be 0)
-    BelovedPrincess=""        # "Yes" or "No" (If yes, Alignment should be "Town")
-    Virgin=""                 # "Yes" or "No"
-    LynchBomb=""              # "Yes" or "No"
-    NightBomb=""              # "Yes" or "No"
-    InnocentChild=""          # "Yes" or "No"
-    FriendlyNeighbour=""      # "Yes", "Odd", "Even" or "No"
-    Saulus=""                 # "Yes" or "No" (If yes, Alignment should be "Mafia" and Team should be 0)
-    Judas=""                  # "Yes" or "No" (If yes, Alignment should be "Town")
-    Cop=""                    # "Yes", "Odd", "Even" or "No" --- note, must add record of who the cop has investigated
-    Doctor=""                 # "Yes", "Odd", "Even" or "No"
-    RoleBlocker=""            # "Yes", "Odd", "Even" or "No"
-    BusDriver=""              # "Yes", "Odd", "Even" or "No"
-    Vigilante=""              # "Yes", "Odd", "Even" or "No"
-    TeamRecruiter=""          # "Yes" or "No" (If yes, Alignment should be "Town")
-    TeamNightKill=""          # "Yes", "Odd", "Even" or "No" (If Alignment is "Mafia", should ordinarily not be "No")
-    DeputyCop=""              # "Yes" or "No"
-    DeputyDoctor=""           # "Yes" or "No"
-    DeputyRoleBlocker=""      # "Yes" or "No"
-    DeputyBusDriver=""        # "Yes" or "No"
-    DeputyVigilante=""        # "Yes" or "No"
-    DeputyTeamRecruiter=""    # "Yes" or "No"
-    NightKillResistant=""        # -1 (for invulnerable), 0 (for normal), otherwise X-shot
-    LynchResistant=""            # -1 (for invulnerable), 0 (for normal), otherwise X-shot
-    PlayerToAdd = {}
+    PlayerToAdd = ReturnBlankPlayer(1)
     for LineFromTextFile in PlayerSetupFile:
-        if LineFromTextFile[:3] == '***':   # If the line is "***" it's time to add the Player to the List
-            PlayerToAdd['PlayerID']=PlayerID    # New PlayerID is not take from text file but dynamically generated
+        if LineFromTextFile[:3] != '***':   # If the line is not "***", interpret the line to add it to the PlayerToAdd dictionary
+            if (len(LineFromTextFile) > 0) and LineFromTextFile[:1] != '#': #If the line isn't commented or empty
+                exec("PlayerToAdd['" + LineFromTextFile.replace("=", "']="))
+        else:   # If the line is "***" it's time to add the Player to the List
             PlayerToAdd['Alive']='Yes'    # Default 'Alive' to 'Yes', can change to 'No' during game
             if PlayerToAdd['InnocentChild'] == "Yes":
                 PlayerToAdd['NumberOfNamesInHat'] = 0
@@ -101,9 +115,7 @@ def CreatePlayerList(): # Reads players.txt and makes the main list for use in a
                 PlayerToAdd['NumberOfNamesInHat'] = 100
             GlobalPlayerList.append(PlayerToAdd.copy())  # Add PlayerToAdd to the global PlayerList list
             PlayerID += 1
-            PlayerToAdd.clear() # Empty PlayerToAdd so that the next player can be assembled
-        else:   # If the line is not "***", interpret the line to add it to the PlayerToAdd dictionary
-            exec("PlayerToAdd['" + LineFromTextFile.replace("=", "']="))
+            PlayerToAdd = ReturnBlankPlayer(PlayerID) # Prepare the next player
 
 
 def SearchPlayersFor(Variable,Operator,Comparator): # Return a list of PlayerIDs for players who match criteria
@@ -698,24 +710,17 @@ def ReceiveDoctorActions():
 
 def ReceiveCopActions():
     global ThisTurnsInvestigationActions
-    global RevealedInvestigations
-    global UnrevealedInvestigations
     ThisTurnsInvestigationActions = []
-    NoPlayerWillInvestigate = []
-    #Build a list of people who will not be investigated because they already have been
-    if len(RevealedInvestigations) > 0:
-        for Investigation in RevealedInvestigation:
-            NoPlayerWillInvestigate.append(Investigation('Target'))
     #Build a list of cops who will be asked for night actions
     Cops = ReturnOneListWithCommonItemsFromTwoLists(SearchPlayersFor("Alive","==","'Yes'"),SearchPlayersFor("Cop","!=","'No'"))
     if Cops != []:
         for Cop in Cops:
-            #Build a list of people who this cop has already investigated (but hasn't passed on)
-            ThisPlayerWillNotInvestigate = []
-            if len(UnrevealedInvestigations) > 0:
-                for Investigation in UnrevealedInvestigations:
-                    if Investigation('Cop') == Cop:
-                        ThisPlayerWillNotInvestigate.append(Investigation('Target'))
+            WillNotInvestigate = []
+            #Build a list of people who have been the target of a revealed investigation by anyone or an unrevealed investigation by this cop
+            if len(InvestigationResults) > 0:
+                for Investigation in InvestigationResults:
+                    if (Investigation['Cop'] == Cop) or (Investigation['Revealed'] == 'Yes'):
+                        WillNotInvestigate.append(Investigation['Target'])
             CopActiveTonight = "No"
             #See if this Cop is to be active on this particular night
             CopValueFromPlayerList = GetAttributeFromPlayer(Cop,"Cop")
@@ -726,11 +731,10 @@ def ReceiveCopActions():
             if Cop in PlayersBeingRoleBlocked: #Cop is inactive if roleblocked
                 CopActiveTonight = "No"
             if CopActiveTonight == "Yes":
-                ExcludedPlayers = NoPlayerWillInvestigate + ThisPlayerWillNotInvestigate
                 if GetAttributeFromPlayer(Cop,'Alignment') == "Mafia":
-                    Target = TryToPickTownPlayer(Cop,ExcludedPlayers)
+                    Target = TryToPickTownPlayer(Cop,WillNotInvestigate)
                 else:
-                    Target = TryToPickMafiaPlayer(Cop,ExcludedPlayers)
+                    Target = TryToPickMafiaPlayer(Cop,WillNotInvestigate)
                 if Target != 0:
                     ThisTurnsInvestigationActions.append({'Cop': Cop, 'Target' : Target})
                     print("On this night, Player " + str(Cop) + " is Investigating Player " + str(Target) + " as a Vigilante.")
