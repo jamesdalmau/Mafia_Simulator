@@ -163,9 +163,6 @@ def TryToLynch():
 
 
 def KillPlayer(Killer,Victim,KillType):
-    print("Killer = " + str(Killer))
-    print("Victim = " + str(Victim))
-    print("KillType = " + str(KillType))
     ResistancesOvercome = "No" #Test resistances first
     if KillType == "Lynch":
         if GetAttributeFromPlayer(Victim,'LynchResistant') != 0:  #If player is lynch resistant
@@ -175,8 +172,6 @@ def KillPlayer(Killer,Victim,KillType):
             ResistancesOvercome = "Yes"
     elif KillType == "Night":
         if GetAttributeFromPlayer(Victim,'NightKillResistant') != 0:  #If player is NK resistant
-            #print ("So here's the victim id: " + str(Victim))
-            #print ("So here's the NKR: " + str(GetAttributeFromPlayer(Victim,'NightKillResistant')))
             WriteAttributeToPlayer(Victim,'NightKillResistant',int(GetAttributeFromPlayer(Victim,'NightKillResistant'))-1)
             print("Player was night-kill-resistant.")
         else:
@@ -186,9 +181,11 @@ def KillPlayer(Killer,Victim,KillType):
         if GetAttributeFromPlayer(Victim,'Judas') == 'Yes' and GetAttributeFromPlayer(Victim,'Alignment') == 'Town': #If Player is a Judas
             WriteAttributeToPlayer(Victim,'Alignment','Mafia')
             KillBecomesConvert = "Yes"
+            print("Player was a Judas! Player is now Mafia.")
         elif GetAttributeFromPlayer(Victim,'Saulus') == 'Yes' and GetAttributeFromPlayer(Victim,'Alignment') == 'Mafia': #If Player is a Saulus
             WriteAttributeToPlayer(Victim,'Alignment','Town')
             KillBecomesConvert = "Yes"
+            print("Player was a Saulus! Player is now Town.")
         if KillBecomesConvert == "No": #Proceed if kill wasn't converted
             WriteAttributeToPlayer(Victim,'Alive','No')   #kill player
             if GetAttributeFromPlayer(Victim,'BelovedPrincess') == 'Yes': # If player is a Beloved Princess
@@ -196,7 +193,11 @@ def KillPlayer(Killer,Victim,KillType):
                 global DaysThatDoNotHappen
                 DaysThatDoNotHappen.append(Day+1)
             if GetAttributeFromPlayer(Victim,'Virgin') == "Yes": # If player is a Virgin
-                print("Player " + str(Victim) + " was a Virgin! There can be no night kills on " + str(Night + 1) + ".")
+                if KillType == "Lynch":
+                    NightOnWhichThereWillBeNoKills = Night
+                elif KillType == "Night":
+                    NightOnWhichThereWillBeNoKills = Night+1
+                print("Player " + str(Victim) + " was a Virgin! There can be no night kills on " + str(NightOnWhichThereWillBeNoKills) + ".")
                 global NightsOnWhichThereAreNoKills
                 NightsOnWhichThereAreNoKills.append(Night+1)
             if KillType == 'Lynch' and GetAttributeFromPlayer(Victim,'LynchBomb') == 'Yes':
@@ -454,7 +455,7 @@ def ConsiderRevealingInvestigations():
                         WriteAttributeToPlayer(Result['Target'],'NumberOfNamesInHat',10)
                     if Result['Alignment'] == "Mafia":
                         WriteAttributeToPlayer(Result['Target'],'NumberOfNamesInHat',300)
-                    print("Player " + str(Result['Cop']) + " just revealed that they investigated Player " + str(Result['Target']) + " and found that they are " + Result['Alignment'])
+                    print("Player " + str(Result['Cop']) + " just revealed that they investigated Player " + str(Result['Target']) + " and found that they are " + str(Result['Alignment']))
 
 def SimulateSingleGame():
     InitiateSingleGameVariables()
@@ -547,8 +548,8 @@ def ProcessCopActions():
     global ThisTurnsInvestigationActions
     for Investigation in ThisTurnsInvestigationActions:
         ActualTarget = FindBusDrivingPairs(Investigation['Target'])
-        if Len(ActualTarget) == 1: #Investigation fails if busdriving means there's multiple targets
-            InvestigationResults.append({'Cop':Investigation['Cop'],'Target':Investigation['Target'],'Alignment':GetAttributeFromPlayer(ActualTarget(0),'Alignment'),'Revealed':'No'})
+        if len(ActualTarget) == 1: #Investigation fails if busdriving means there's multiple targets
+            InvestigationResults.append({'Cop':Investigation['Cop'],'Target':Investigation['Target'],'Alignment':GetAttributeFromPlayer(ActualTarget[0],'Alignment'),'Revealed':'No'})
 
 
 def ProcessTeamNightKillActions():
@@ -581,22 +582,25 @@ def ReceiveRoleBlockingActions():
     PlayersBeingRoleBlocked = []
     LivingRoleBlockers = ReturnOneListWithCommonItemsFromTwoLists(SearchPlayersFor('Alive','==',"'Yes'"),SearchPlayersFor("RoleBlocker","!=","'No'"))
     if LivingRoleBlockers != []: #If there are any roleblockers
-        for Player in LivingRoleBlockers:
+        for RoleBlocker in LivingRoleBlockers:
             RoleBlockerActiveTonight = "No"
             #See if this roleblocker is to be active on this particular night
-            RoleBlockerValueFromPlayerlist = GetAttributeFromPlayer(Player,"RoleBlocker")
+            RoleBlockerValueFromPlayerlist = GetAttributeFromPlayer(RoleBlocker,"RoleBlocker")
             if RoleBlockerValueFromPlayerlist == "Yes":
                 RoleBlockerActiveTonight = "Yes"
             elif RoleBlockerValueFromPlayerlist == IsNumberOddOrEven(Night):
                 RoleBlockerActiveTonight = "Yes"
+            if GetAttributeFromPlayer(RoleBlocker, "CopShots") == 0:
+                RoleBlockerActiveTonight = "No"
             if RoleBlockerActiveTonight == "Yes":
-                if GetAttributeFromPlayer(Player,'Alignment') == 'Mafia':
-                    PlayerToBeRoleBlocked = TryToPickTownPlayer(Player,[])
+                if GetAttributeFromPlayer(RoleBlocker,'Alignment') == 'Mafia':
+                    PlayerToBeRoleBlocked = TryToPickTownPlayer(RoleBlocker,[])
                 else:
-                    PlayerToBeRoleBlocked = TryToPickMafiaPlayer(Player,[])
+                    PlayerToBeRoleBlocked = TryToPickMafiaPlayer(RoleBlocker,[])
                 if PlayersBeingRoleBlocked != 0:
+                    WriteAttributeToPlayer(RoleBlocker, "RoleBlockerShots", GetAttributeFromPlayer(RoleBlocker, "RoleBlockerShots")-1)
                     PlayersBeingRoleBlocked.append(PlayerToBeRoleBlocked)
-                    print("On this night, Player " + str(Player) + " is roleblocking " + str(PlayerToBeRoleBlocked))
+                    print("On this night, Player " + str(RoleBlocker) + " is roleblocking " + str(PlayerToBeRoleBlocked))
 
 
 def ReceiveBusDrivingActions():
@@ -672,12 +676,15 @@ def ReceiveVigilanteKillActions():
                 VigilanteActiveTonight = "Yes"
             if Vigilante in PlayersBeingRoleBlocked: #BusDriver is inactive if roleblocked
                 VigilanteActiveTonight = "No"
+            if GetAttributeFromPlayer(Vigilante, "VigilanteShots") == 0:
+                VigilanteActiveTonight = "No"
             if VigilanteActiveTonight == "Yes":
                 if GetAttributeFromPlayer(Vigilante,'Alignment') == "Mafia":
                     Target = TryToPickTownPlayer(Vigilante,[])
                 else:
                     Target = TryToPickMafiaPlayer(Vigilante,[])
                 if Target != 0:
+                    WriteAttributeToPlayer(Vigilante, "VigilanteShots", GetAttributeFromPlayer(Vigilante, "VigilanteShots")-1)
                     VigilanteActions.append({'Killer': Vigilante,'Victim': Target})
                     print("On this night, Player " + str(Vigilante) + " is NightKilling Player " + str(Target) + " as a Vigilante.")
 
@@ -698,12 +705,15 @@ def ReceiveDoctorActions():
                 DoctorActiveTonight = "Yes"
             if Doctor in PlayersBeingRoleBlocked: #Doctor is inactive if roleblocked
                 DoctorActiveTonight = "No"
+            if GetAttributeFromPlayer(Doctor, "DoctorShots") == 0:
+                DoctorActiveTonight = "No"
             if DoctorActiveTonight == "Yes":
                 if GetAttributeFromPlayer(Player,'Alignment') == 'Mafia':
                     PlayerToBeDoctored = TryToPickMafiaPlayer(Player,[])
                 else:
                     PlayerToBeDoctored = TryToPickTownPlayer(Player,[])
                 if PlayerToBeDoctored != 0:
+                    WriteAttributeToPlayer(Doctor, "DoctorShots", GetAttributeFromPlayer(Doctor, "DoctorShots")-1)
                     PlayersTargetedByDoctors.append(PlayerToBeDoctored)
                     print("On this night, Player " + str(Doctor) + " is Doctoring " + str(PlayerToBeDoctored))
 
@@ -730,14 +740,17 @@ def ReceiveCopActions():
                 CopActiveTonight = "Yes"
             if Cop in PlayersBeingRoleBlocked: #Cop is inactive if roleblocked
                 CopActiveTonight = "No"
+            if GetAttributeFromPlayer(Cop, "CopShots") == 0:
+                CopActiveTonight = "No"
             if CopActiveTonight == "Yes":
                 if GetAttributeFromPlayer(Cop,'Alignment') == "Mafia":
                     Target = TryToPickTownPlayer(Cop,WillNotInvestigate)
                 else:
                     Target = TryToPickMafiaPlayer(Cop,WillNotInvestigate)
                 if Target != 0:
+                    WriteAttributeToPlayer(Cop, "CopShots", GetAttributeFromPlayer(Cop, "CopShots")-1)
                     ThisTurnsInvestigationActions.append({'Cop': Cop, 'Target' : Target})
-                    print("On this night, Player " + str(Cop) + " is Investigating Player " + str(Target) + " as a Vigilante.")
+                    print("On this night, Player " + str(Cop) + " is Investigating Player " + str(Target))
 
 
 InitiateGlobalVariables()

@@ -28,9 +28,11 @@ Alignment="Town"
 ***
 PlayerID = 7
 Alignment="Town"
+LynchBomb = 'Yes'
 ***
 PlayerID = 8
 Alignment="Town"
+NightBomb = 'Yes'
 ***
 PlayerID = 9
 Alignment="Town"
@@ -43,4 +45,23 @@ NightKillResistant=1
 PlayerID = 11
 Alignment="Town"
 BelovedPrincess="Yes"
+***
+PlayerID = 12
+Alignment="Town"
+Cop='Yes'
+CopShots=5
+***
+PlayerID = 13
+Alignment="Town"
+Virgin='Yes'
+***
+PlayerID = 14
+Alignment="Mafia"
+Team=1
+TeamNightKill="Odd"
+***
+PlayerID = 15
+Alignment="Mafia"
+Team=1
+TeamNightKill="Odd"
 ***
