@@ -22,7 +22,7 @@ def InitiateSingleGameVariables(): # Set up variables to run a single game
     global DaysThatDoNotHappen
     DaysThatDoNotHappen = []    #This is needed for the Beloved Princess
     global NightsOnWhichThereAreNoKills
-    NightsOnWhichThereAreNoKills = []   #This is needed for the Virgin
+    NightsOnWhichThereAreNoKills = []   #This is needed for the Saboteur
     global InvestigationResults
     InvestigationResults = []
     global WinningTeam
@@ -59,13 +59,72 @@ def PickRandomItemFromList(List1):  # Pure list function
         return()
 
 
+def TestForDeputies(DyingPlayer):
+    TestForDeputyCops(DyingPlayer)
+    TestForDeputyDoctors(DyingPlayer)
+
+
+def TestForDeputyCops(DyingPlayer):
+    FoundDeputyCop = 0
+    if GetAttributeFromPlayer(DyingPlayer,'Cop') != 'No': #Test for deputy cop
+        print("Dying player was a cop. Looking for deputies.")
+        PossibleDeputyCops = []
+        LivingDeputyCopsOfSameAlignmentAndTeam = []
+        LivingDeputyCopsOfSameAlignment = ReturnOneListWithCommonItemsFromThreeLists(SearchPlayersFor('Alignment','==',"'" + GetAttributeFromPlayer(DyingPlayer,'Alignment') + "'"),SearchPlayersFor('Alive','==',"'Yes'"),SearchPlayersFor('DeputyCop','==',"'Yes'"))
+        if len(LivingDeputyCopsOfSameAlignment) != 0: # If there are any living deputies of same alignment
+            print("There are some deputy cops of that alignment.")
+            if GetAttributeFromPlayer(DyingPlayer,'Team') != 0: # If the dying player has a team, and there are deputies alive on that team, narrow the list to those on that team
+                print("The player had a team, so we're looking for deputies on that team.")
+                LivingDeputyCopsOfSameAlignmentAndTeam = ReturnOneListWithCommonItemsFromTwoLists(LivingDeputyCopsOfSameAlignment,SearchPlayersFor('Team','==',GetAttributeFromPlayer(DyingPlayer,'Team')))
+                if len(LivingDeputyCopsOfSameAlignmentAndTeam) == 0:
+                    print("There were no deputies on that team, so we're looking for any deputies.")
+                    LivingDeputyCopsOfSameAlignmentAndTeam = LivingDeputyCopsOfSameAlignment
+            else: # If the dying player has no team, any deputy of that alignment will do
+                print("The player had no team, so we're looking for any deputies.")
+                LivingDeputyCopsOfSameAlignmentAndTeam = LivingDeputyCopsOfSameAlignment
+        if len(LivingDeputyCopsOfSameAlignmentAndTeam) != 0:
+            FoundDeputyCop = PickRandomItemFromList(LivingDeputyCopsOfSameAlignmentAndTeam)
+            print("We found a living Deputy Cop! It was player " + str (FoundDeputyCop))
+    if FoundDeputyCop != 0:
+        WriteAttributeToPlayer(FoundDeputyCop,'Cop',GetAttributeFromPlayer(DyingPlayer,'Cop'))
+        WriteAttributeToPlayer(FoundDeputyCop,'CopShots',GetAttributeFromPlayer(DyingPlayer,'CopShots'))
+        WriteAttributeToPlayer(FoundDeputyCop,'DeputyCop','No')
+
+
+def TestForDeputyDoctors(DyingPlayer):
+    FoundDeputyDoctor = 0
+    if GetAttributeFromPlayer(DyingPlayer,'Doctor') != 'No': #Test for deputy Doctor
+        print("Dying player was a Doctor. Looking for deputies.")
+        PossibleDeputyDoctors = []
+        LivingDeputyDoctorsOfSameAlignmentAndTeam = []
+        LivingDeputyDoctorsOfSameAlignment = ReturnOneListWithCommonItemsFromThreeLists(SearchPlayersFor('Alignment','==',"'" + GetAttributeFromPlayer(DyingPlayer,'Alignment') + "'"),SearchPlayersFor('Alive','==',"'Yes'"),SearchPlayersFor('DeputyDoctor','==',"'Yes'"))
+        if len(LivingDeputyDoctorsOfSameAlignment) != 0: # If there are any living deputies of same alignment
+            print("There are some deputy Doctors of that alignment.")
+            if GetAttributeFromPlayer(DyingPlayer,'Team') != 0: # If the dying player has a team, and there are deputies alive on that team, narrow the list to those on that team
+                print("The player had a team, so we're looking for deputies on that team.")
+                LivingDeputyDoctorsOfSameAlignmentAndTeam = ReturnOneListWithCommonItemsFromTwoLists(LivingDeputyDoctorsOfSameAlignment,SearchPlayersFor('Team','==',GetAttributeFromPlayer(DyingPlayer,'Team')))
+                if len(LivingDeputyDoctorsOfSameAlignmentAndTeam) == 0:
+                    print("There were no deputies on that team, so we're looking for any deputies.")
+                    LivingDeputyDoctorsOfSameAlignmentAndTeam = LivingDeputyDoctorsOfSameAlignment
+            else: # If the dying player has no team, any deputy of that alignment will do
+                print("The player had no team, so we're looking for any deputies.")
+                LivingDeputyDoctorsOfSameAlignmentAndTeam = LivingDeputyDoctorsOfSameAlignment
+        if len(LivingDeputyDoctorsOfSameAlignmentAndTeam) != 0:
+            FoundDeputyDoctor = PickRandomItemFromList(LivingDeputyDoctorsOfSameAlignmentAndTeam)
+            print("We found a living Deputy Doctor! It was player " + str (FoundDeputyDoctor))
+    if FoundDeputyDoctor != 0:
+        WriteAttributeToPlayer(FoundDeputyDoctor,'Doctor',GetAttributeFromPlayer(DyingPlayer,'Doctor'))
+        WriteAttributeToPlayer(FoundDeputyDoctor,'DoctorShots',GetAttributeFromPlayer(DyingPlayer,'DoctorShots'))
+        WriteAttributeToPlayer(FoundDeputyDoctor,'DeputyDoctor','No')
+
+
 def ReturnBlankPlayer(PlayerID):
     PlayerToReturn = {}
     PlayerToReturn['PlayerID'] = PlayerID
     PlayerToReturn['Alignment'] = 'None'            # "Town" or "Mafia" or "None"
     PlayerToReturn['Team'] = 0                      # 0 (for no team) or the number of the team (Town and Mafia team numbers must be different)
     PlayerToReturn['BelovedPrincess'] = 'No'        # "Yes" or "No" (If yes, Alignment should be "Town")
-    PlayerToReturn['Virgin'] = 'No'                 # "Yes" or "No"
+    PlayerToReturn['Saboteur'] = 'No'                 # "Yes" or "No"
     PlayerToReturn['LynchBomb'] = 'No'              # "Yes" or "No"
     PlayerToReturn['NightBomb'] = 'No'              # "Yes" or "No"
     PlayerToReturn['InnocentChild'] = 'No'          # "Yes" or "No"
@@ -83,7 +142,6 @@ def ReturnBlankPlayer(PlayerID):
     PlayerToReturn['BusDriverShots'] = -1       # if -1, unlimited. Otherwise, # of possible busdrivings
     PlayerToReturn['Vigilante'] = 'No'              # "Yes", "Odd", "Even" or "No"
     PlayerToReturn['VigilanteShots'] = -1       # if -1, unlimited. Otherwise, # of possible vig kills
-    PlayerToReturn['TeamRecruiter'] = 'No'          # "Yes" or "No" (If yes, Alignment should be "Town")
     PlayerToReturn['TeamNightKill'] = 'No'          # "Yes", "Odd", "Even" or "No" (If Alignment is "Mafia", should ordinarily not be "No")
     PlayerToReturn['TeamNightKillShots'] = -1   # if -1, unlimited. Otherwise, # of possible team night kills
     PlayerToReturn['DeputyCop'] = 'No'              # "Yes" or "No"
@@ -91,7 +149,6 @@ def ReturnBlankPlayer(PlayerID):
     PlayerToReturn['DeputyRoleBlocker'] = 'No'      # "Yes" or "No"
     PlayerToReturn['DeputyBusDriver'] = 'No'        # "Yes" or "No"
     PlayerToReturn['DeputyVigilante'] = 'No'        # "Yes" or "No"
-    PlayerToReturn['DeputyTeamRecruiter'] = 'No'    # "Yes" or "No"
     PlayerToReturn['NightKillResistant'] = 0        # -1 (for invulnerable), 0 (for normal), otherwise X-shot
     PlayerToReturn['LynchResistant'] = 0            # -1 (for invulnerable), 0 (for normal), otherwise X-shot
     return(PlayerToReturn)
@@ -188,18 +245,21 @@ def KillPlayer(Killer,Victim,KillType):
             print("Player was a Saulus! Player is now Town.")
         if KillBecomesConvert == "No": #Proceed if kill wasn't converted
             WriteAttributeToPlayer(Victim,'Alive','No')   #kill player
+            TestForDeputies(Victim)
             if GetAttributeFromPlayer(Victim,'BelovedPrincess') == 'Yes': # If player is a Beloved Princess
                 print("Player " + str(Victim) + " was a Beloved Princess! Day " + str(Day + 1) + " will be skipped.")
                 global DaysThatDoNotHappen
                 DaysThatDoNotHappen.append(Day+1)
-            if GetAttributeFromPlayer(Victim,'Virgin') == "Yes": # If player is a Virgin
+            if GetAttributeFromPlayer(Victim,'Saboteur') == "Yes": # If player is a Saboteur
                 if KillType == "Lynch":
                     NightOnWhichThereWillBeNoKills = Night
                 elif KillType == "Night":
                     NightOnWhichThereWillBeNoKills = Night+1
-                print("Player " + str(Victim) + " was a Virgin! There can be no night kills on " + str(NightOnWhichThereWillBeNoKills) + ".")
+                print("Player " + str(Victim) + " was a Saboteur! There can be no night kills on " + str(NightOnWhichThereWillBeNoKills) + ".")
                 global NightsOnWhichThereAreNoKills
-                NightsOnWhichThereAreNoKills.append(Night+1)
+                NightsOnWhichThereAreNoKills.append(NightOnWhichThereWillBeNoKills)
+            print('LynchBomb = ' + str(GetAttributeFromPlayer(Victim,'LynchBomb')))
+            print('NightBomb = ' + str(GetAttributeFromPlayer(Victim,'NightBomb')))
             if KillType == 'Lynch' and GetAttributeFromPlayer(Victim,'LynchBomb') == 'Yes':
                 RandomVoterKilled = PickRandomItemFromList(Killer)
                 print("Player " + str(Victim) + " was a LynchBomb. Random voter, Player " + str(RandomVoterKilled) + ", is targeted by the bomb.")
@@ -207,6 +267,8 @@ def KillPlayer(Killer,Victim,KillType):
             elif KillType == 'Night' and GetAttributeFromPlayer(Victim,'NightBomb') == 'Yes':
                 print("Player " + str(Victim) + " was a NightBomb. Their killer, Player " + str(Killer[0]) + ", is targeted by the bomb.")
                 KillPlayer(Victim,Killer,'NightBomb')   #Kill killer
+            else:
+                print("Player " + str(Victim) + " was neither a Lynch Bomb nor a Night Bomb")
 
 
 def PunishAndRewardVotersAfterLynch(Voters,LynchedPlayer):
@@ -518,9 +580,12 @@ def NightRoutine():
     ProcessTeamNightKillActions()
     ProcessVigilanteKillActions()
     if Night not in NightsOnWhichThereAreNoKills:
+        print("The night kills are not being skipped because this night is not in " + str(NightsOnWhichThereAreNoKills))
         for ActualNightKill in ActualNightKills:
             print("Player " + str(ActualNightKill['Killer']) + " is night killing " + str(ActualNightKill['Victim']))
             KillPlayer(ActualNightKill['Killer'],ActualNightKill['Victim'],'Night')
+    else:
+        print("The night kills are being skipped because this night is in " + str(NightsOnWhichThereAreNoKills))
 
 
 def ProcessDoctorActions():

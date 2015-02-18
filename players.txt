@@ -28,21 +28,23 @@ Alignment="Town"
 ***
 PlayerID = 7
 Alignment="Town"
-LynchBomb = 'Yes'
+LynchBomb='Yes'
+NightBomb='Yes'
 ***
-PlayerID = 8
+PlayerID=8
 Alignment="Town"
-NightBomb = 'Yes'
+LynchBomb='Yes'
+NightBomb='Yes'
 ***
-PlayerID = 9
+PlayerID=9
 Alignment="Town"
 LynchResistant=1
 ***
-PlayerID = 10
+PlayerID=10
 Alignment="Town"
 NightKillResistant=1
 ***
-PlayerID = 11
+PlayerID=11
 Alignment="Town"
 BelovedPrincess="Yes"
 ***
@@ -53,7 +55,8 @@ CopShots=5
 ***
 PlayerID = 13
 Alignment="Town"
-Virgin='Yes'
+Saboteur="Yes"
+DeputyCop="Yes"
 ***
 PlayerID = 14
 Alignment="Mafia"
