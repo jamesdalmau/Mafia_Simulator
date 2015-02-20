@@ -22,7 +22,7 @@ def InitiateSingleGameVariables(): # Set up variables to run a single game
     global DaysThatDoNotHappen
     DaysThatDoNotHappen = []    #This is needed for the Beloved Princess
     global NightsOnWhichThereAreNoKills
-    NightsOnWhichThereAreNoKills = []   #This is needed for the Saboteur
+    NightsOnWhichThereAreNoKills = []   #This is needed for the Inkbomb
     global InvestigationResults
     InvestigationResults = []
     global WinningTeam
@@ -60,62 +60,41 @@ def PickRandomItemFromList(List1):  # Pure list function
 
 
 def TestForDeputies(DyingPlayer):
-    TestForDeputyCops(DyingPlayer)
-    TestForDeputyDoctors(DyingPlayer)
+    TestForDeputy(DyingPlayer,'Cop')
+    TestForDeputy(DyingPlayer,'Doctor')
+    TestForDeputy(DyingPlayer,'RoleBlocker')
+    TestForDeputy(DyingPlayer,'BusDriver')
+    TestForDeputy(DyingPlayer,'Vigilante')
 
-
-def TestForDeputyCops(DyingPlayer):
-    FoundDeputyCop = 0
-    if GetAttributeFromPlayer(DyingPlayer,'Cop') != 'No': #Test for deputy cop
-        print("Dying player was a cop. Looking for deputies.")
-        PossibleDeputyCops = []
-        LivingDeputyCopsOfSameAlignmentAndTeam = []
-        LivingDeputyCopsOfSameAlignment = ReturnOneListWithCommonItemsFromThreeLists(SearchPlayersFor('Alignment','==',"'" + GetAttributeFromPlayer(DyingPlayer,'Alignment') + "'"),SearchPlayersFor('Alive','==',"'Yes'"),SearchPlayersFor('DeputyCop','==',"'Yes'"))
-        if len(LivingDeputyCopsOfSameAlignment) != 0: # If there are any living deputies of same alignment
-            print("There are some deputy cops of that alignment.")
+def TestForDeputy(DyingPlayer,RoleType):
+    FoundDeputy = 0
+    if GetAttributeFromPlayer(DyingPlayer,RoleType) != 'No': #Test for deputy
+        print("Dying player was a " + RoleType + " Looking for deputies.")
+        PossibleDeputies = []
+        LivingDeputiesOfSameAlignmentAndTeam = []
+        LivingDeputiesOfSameAlignment = ReturnOneListWithCommonItemsFromThreeLists(SearchPlayersFor('Alignment','==',"'" + GetAttributeFromPlayer(DyingPlayer,'Alignment') + "'"),SearchPlayersFor('Alive','==',"'Yes'"),SearchPlayersFor('Deputy' + RoleType,'==',"'Yes'"))
+        if len(LivingDeputiesOfSameAlignment) != 0: # If there are any living deputies of same alignment
+            print("There are some deputy "+ RoleType + "s of that alignment.")
             if GetAttributeFromPlayer(DyingPlayer,'Team') != 0: # If the dying player has a team, and there are deputies alive on that team, narrow the list to those on that team
                 print("The player had a team, so we're looking for deputies on that team.")
-                LivingDeputyCopsOfSameAlignmentAndTeam = ReturnOneListWithCommonItemsFromTwoLists(LivingDeputyCopsOfSameAlignment,SearchPlayersFor('Team','==',GetAttributeFromPlayer(DyingPlayer,'Team')))
-                if len(LivingDeputyCopsOfSameAlignmentAndTeam) == 0:
+                LivingDeputiesOfSameAlignmentAndTeam = ReturnOneListWithCommonItemsFromTwoLists(LivingDeputiesOfSameAlignment,SearchPlayersFor('Team','==',GetAttributeFromPlayer(DyingPlayer,'Team')))
+                if len(LivingDeputiesOfSameAlignmentAndTeam) == 0:
                     print("There were no deputies on that team, so we're looking for any deputies.")
-                    LivingDeputyCopsOfSameAlignmentAndTeam = LivingDeputyCopsOfSameAlignment
+                    LivingDeputiesOfSameAlignmentAndTeam = LivingDeputiesOfSameAlignment
             else: # If the dying player has no team, any deputy of that alignment will do
                 print("The player had no team, so we're looking for any deputies.")
-                LivingDeputyCopsOfSameAlignmentAndTeam = LivingDeputyCopsOfSameAlignment
-        if len(LivingDeputyCopsOfSameAlignmentAndTeam) != 0:
-            FoundDeputyCop = PickRandomItemFromList(LivingDeputyCopsOfSameAlignmentAndTeam)
-            print("We found a living Deputy Cop! It was player " + str (FoundDeputyCop))
-    if FoundDeputyCop != 0:
-        WriteAttributeToPlayer(FoundDeputyCop,'Cop',GetAttributeFromPlayer(DyingPlayer,'Cop'))
-        WriteAttributeToPlayer(FoundDeputyCop,'CopShots',GetAttributeFromPlayer(DyingPlayer,'CopShots'))
-        WriteAttributeToPlayer(FoundDeputyCop,'DeputyCop','No')
+                LivingDeputiesOfSameAlignmentAndTeam = LivingDeputiesOfSameAlignment
+        if len(LivingDeputiesOfSameAlignmentAndTeam) != 0:
+            FoundDeputy = PickRandomItemFromList(LivingDeputiesOfSameAlignmentAndTeam)
+            print("We found a living Deputy " + RoleType + "! It was player " + str (FoundDeputy))
+    if FoundDeputy != 0:
+        WriteAttributeToPlayer(FoundDeputy,RoleType,GetAttributeFromPlayer(DyingPlayer,RoleType))
+        WriteAttributeToPlayer(FoundDeputy,RoleType + 'Shots',GetAttributeFromPlayer(DyingPlayer,RoleType + 'Shots'))
+        WriteAttributeToPlayer(FoundDeputy,'Deputy' + RoleType,'No')
 
 
-def TestForDeputyDoctors(DyingPlayer):
-    FoundDeputyDoctor = 0
-    if GetAttributeFromPlayer(DyingPlayer,'Doctor') != 'No': #Test for deputy Doctor
-        print("Dying player was a Doctor. Looking for deputies.")
-        PossibleDeputyDoctors = []
-        LivingDeputyDoctorsOfSameAlignmentAndTeam = []
-        LivingDeputyDoctorsOfSameAlignment = ReturnOneListWithCommonItemsFromThreeLists(SearchPlayersFor('Alignment','==',"'" + GetAttributeFromPlayer(DyingPlayer,'Alignment') + "'"),SearchPlayersFor('Alive','==',"'Yes'"),SearchPlayersFor('DeputyDoctor','==',"'Yes'"))
-        if len(LivingDeputyDoctorsOfSameAlignment) != 0: # If there are any living deputies of same alignment
-            print("There are some deputy Doctors of that alignment.")
-            if GetAttributeFromPlayer(DyingPlayer,'Team') != 0: # If the dying player has a team, and there are deputies alive on that team, narrow the list to those on that team
-                print("The player had a team, so we're looking for deputies on that team.")
-                LivingDeputyDoctorsOfSameAlignmentAndTeam = ReturnOneListWithCommonItemsFromTwoLists(LivingDeputyDoctorsOfSameAlignment,SearchPlayersFor('Team','==',GetAttributeFromPlayer(DyingPlayer,'Team')))
-                if len(LivingDeputyDoctorsOfSameAlignmentAndTeam) == 0:
-                    print("There were no deputies on that team, so we're looking for any deputies.")
-                    LivingDeputyDoctorsOfSameAlignmentAndTeam = LivingDeputyDoctorsOfSameAlignment
-            else: # If the dying player has no team, any deputy of that alignment will do
-                print("The player had no team, so we're looking for any deputies.")
-                LivingDeputyDoctorsOfSameAlignmentAndTeam = LivingDeputyDoctorsOfSameAlignment
-        if len(LivingDeputyDoctorsOfSameAlignmentAndTeam) != 0:
-            FoundDeputyDoctor = PickRandomItemFromList(LivingDeputyDoctorsOfSameAlignmentAndTeam)
-            print("We found a living Deputy Doctor! It was player " + str (FoundDeputyDoctor))
-    if FoundDeputyDoctor != 0:
-        WriteAttributeToPlayer(FoundDeputyDoctor,'Doctor',GetAttributeFromPlayer(DyingPlayer,'Doctor'))
-        WriteAttributeToPlayer(FoundDeputyDoctor,'DoctorShots',GetAttributeFromPlayer(DyingPlayer,'DoctorShots'))
-        WriteAttributeToPlayer(FoundDeputyDoctor,'DeputyDoctor','No')
+def ReturnLivingParanoidGunOwners:
+    return(ReturnOneListWithCommonItemsFromTwoLists(SearchPlayersFor('Alive','==','Yes'),SearchPlayersFor('ParanoidGunOwner','==','Yes')))
 
 
 def ReturnBlankPlayer(PlayerID):
@@ -123,8 +102,9 @@ def ReturnBlankPlayer(PlayerID):
     PlayerToReturn['PlayerID'] = PlayerID
     PlayerToReturn['Alignment'] = 'None'            # "Town" or "Mafia" or "None"
     PlayerToReturn['Team'] = 0                      # 0 (for no team) or the number of the team (Town and Mafia team numbers must be different)
-    PlayerToReturn['BelovedPrincess'] = 'No'        # "Yes" or "No" (If yes, Alignment should be "Town")
-    PlayerToReturn['Saboteur'] = 'No'                 # "Yes" or "No"
+    PlayerToReturn['BelovedPrincess'] = 'No'        # "No", "Lynch", "Night" or "Either" (if not "No", must be Town. Other values refer to triggering type of kill.)
+    PlayerToReturn['Inkbomb'] = 'No'                 # # "No", "Lynch", "Night" or "Either" (if not "No", must be Mafia. Other values refer to triggering type of kill.)
+    PlayerToReturn['ParanoidGunOwner'] = 'No'              # "Yes" or "No"
     PlayerToReturn['LynchBomb'] = 'No'              # "Yes" or "No"
     PlayerToReturn['NightBomb'] = 'No'              # "Yes" or "No"
     PlayerToReturn['InnocentChild'] = 'No'          # "Yes" or "No"
@@ -246,16 +226,18 @@ def KillPlayer(Killer,Victim,KillType):
         if KillBecomesConvert == "No": #Proceed if kill wasn't converted
             WriteAttributeToPlayer(Victim,'Alive','No')   #kill player
             TestForDeputies(Victim)
-            if GetAttributeFromPlayer(Victim,'BelovedPrincess') == 'Yes': # If player is a Beloved Princess
+            BelovedPrincess = GetAttributeFromPlayer(Victim,'BelovedPrincess')
+            Inkbomb = GetAttributeFromPlayer(Victim,'Inkbomb')
+            if BelovedPrincess == 'Either' or BelovedPrincess == KillType: # If player is a Beloved Princess
                 print("Player " + str(Victim) + " was a Beloved Princess! Day " + str(Day + 1) + " will be skipped.")
                 global DaysThatDoNotHappen
                 DaysThatDoNotHappen.append(Day+1)
-            if GetAttributeFromPlayer(Victim,'Saboteur') == "Yes": # If player is a Saboteur
+            if Inkbomb == 'Either' or Inkbomb == KillType: # If player is an Inkbomb
                 if KillType == "Lynch":
                     NightOnWhichThereWillBeNoKills = Night
                 elif KillType == "Night":
                     NightOnWhichThereWillBeNoKills = Night+1
-                print("Player " + str(Victim) + " was a Saboteur! There can be no night kills on " + str(NightOnWhichThereWillBeNoKills) + ".")
+                print("Player " + str(Victim) + " was a Inkbomb! There can be no night kills on " + str(NightOnWhichThereWillBeNoKills) + ".")
                 global NightsOnWhichThereAreNoKills
                 NightsOnWhichThereAreNoKills.append(NightOnWhichThereWillBeNoKills)
             print('LynchBomb = ' + str(GetAttributeFromPlayer(Victim,'LynchBomb')))
@@ -265,7 +247,7 @@ def KillPlayer(Killer,Victim,KillType):
                 print("Player " + str(Victim) + " was a LynchBomb. Random voter, Player " + str(RandomVoterKilled) + ", is targeted by the bomb.")
                 KillPlayer(Victim,[RandomVoterKilled],'LynchBomb')   #Kill random voter
             elif KillType == 'Night' and GetAttributeFromPlayer(Victim,'NightBomb') == 'Yes':
-                print("Player " + str(Victim) + " was a NightBomb. Their killer, Player " + str(Killer[0]) + ", is targeted by the bomb.")
+                print("Player " + str(Victim) + " was a NightBomb. Their killer, Player " + str(Killer) + ", is targeted by the bomb.")
                 KillPlayer(Victim,Killer,'NightBomb')   #Kill killer
             else:
                 print("Player " + str(Victim) + " was neither a Lynch Bomb nor a Night Bomb")
@@ -433,16 +415,106 @@ def WillGetEnoughLynchVotes(TargetPlayerID):
 
 def DoesPlayer1VoteForPlayer2(Player1,Player2):
     AnswerToReturn = 'Yes'    # The default assumption is that the vote will be cast.
-    # First test to see if the vote will be nullified because of teams
-    if (GetAttributeFromPlayer(Player1,'Team') != 0) and (GetAttributeFromPlayer(Player1,'Team') == GetAttributeFromPlayer(Player2,'Team')):
-        if GetAttributeFromPlayer(Player1,'Alignment') == 'Mafia':
-            if randint(1,3) != 1:   # Mafia that are on the same team only have a 33% chance of voting for each other
-                AnswerToReturn='No'
-        elif GetAttributeFromPlayer(Player1,'Alignment') == 'Town':
-            if randint(1,50) != 1:   # Town that are on the same team only have a 2% chance of voting for each other
-                AnswerToReturn='No'
+    Effect, EffectStrength = EffectOfInvestigationsOnVote(Player1, Player2)
+    if Effect != 'No' and EffectStrength != 'Strong' and EffectStrength != 'Definite': # If the investigations don't mean there's a refusal
+        # Test to see if the vote will be nullified because of teams
+        if (GetAttributeFromPlayer(Player1,'Team') != 0) and (GetAttributeFromPlayer(Player1,'Team') == GetAttributeFromPlayer(Player2,'Team')):
+            if GetAttributeFromPlayer(Player1,'Alignment') == 'Mafia':
+                print("Player " + str(Player1) + " is refusing to vote for Player " + str(Player2) + " because they are on the same mafia team.")
+                Effect = 'No'
+                EffectStrength = 'Weak'
+            elif GetAttributeFromPlayer(Player1,'Alignment') == 'Town':
+                print("Player " + str(Player1) + " is refusing to vote for Player " + str(Player2) + " because they are on the same town team.")
+                Effect = 'No'
+                EffectStrength = 'Definite'
+    if Effect == 'No' and EffectStrength == 'Definite':
+        AnswerToReturn = 'Yes'
+    else:
+        AnswerToReturn = GetYesOrNoFromProbability(Effect,EffectStrength)
     return(AnswerToReturn)
 
+
+def GetYesOrNoFromProbability(Effect,EffectStrength):
+    global PlayerList
+    MinimumProbability = .5
+    MaximumProbability = .95
+    CriticalProportion = .6
+    ProportionOfPlayers = len(SearchPlayersFor('Alive','==',"'Yes'")) / len(PlayerList)
+    Probability = ((MaximumProbability - MinimumProbability) / (CriticalProportion - MaximumProbability) * (ProportionOfPlayers - MaximumProbability)) + MinimumProbability
+    Probability = max(Probability, MinimumProbability)
+#    print("Probability is " + str(Probability))
+    if Effect == 'Yes':
+        if EffectStrength == 'Strong':
+            Probability = Probability * 2
+#            print("Probability has a Strong Yes modifier and is now " + str(Probability))
+        elif EffectStrength == 'Weak':
+            Probability = Probability * 1.4
+#            print("Probability has a Weak Yes modifier and is now " + str(Probability))
+    if Effect == 'No':
+        if EffectStrength == 'Strong':
+            Probability = Probability / 2
+#            print("Probability has a Strong No modifier and is now " + str(Probability))
+        elif EffectStrength == 'Weak':
+            Probability = Probability / 1.4
+#            print("Probability has a Weak No modifier and is now " + str(Probability))
+    Probability = min(Probability, 1)
+    ProbabilityPercentage = Probability * 100
+    ProbabilityPercentage = int(ProbabilityPercentage)
+    RandomNumber = randint(1,100)
+    if RandomNumber < ProbabilityPercentage:
+#        print("Random Number " + str(RandomNumber) + " was lower than " + str(ProbabilityPercentage))
+        return('Yes')
+    else:
+#        print("Random Number " + str(RandomNumber) + " was equal to or higher than " + str(ProbabilityPercentage))
+        return('No')
+    
+def EffectOfInvestigationsOnVote(Player1,Player2):
+    global InvestigationResults
+    EffectToReturn = "None"
+    EffectStrengthToReturn = "None"
+    Player1Alignment = GetAttributeFromPlayer(Player1,'Alignment')
+    Player2Alignment = GetAttributeFromPlayer(Player2,'Alignment')
+
+    #First, build a list of all living players in the team
+    PlayersInPlayer1Team = [Player1]
+    Player1Team = [GetAttributeFromPlayer(Player1,'Team')]
+    if Player1Team != 0:
+        TeamMembers = ReturnOneListWithCommonItemsFromTwoLists(SearchPlayersFor('Alive','==',"'Yes'"),SearchPlayersFor('Team','==',Player1Team))
+        if len(TeamMembers) != 0:
+            Player1Team = []
+            for TeamMember in TeamMembers:
+                Player1Team.append(TeamMember)
+
+    #Next, check unrevealed investigations
+    for Result in InvestigationResults:
+        if Result['Revealed'] == 'No' and Result['Cop'] in Player1Team and Result['Target'] == Player2:
+            if Player1Alignment == 'Town' and Player2Alignment == 'Town':
+                EffectToReturn = 'No'
+                EffectStrengthToReturn = 'Strong'
+            elif Player1Alignment == 'Town' and Player2Alignment == 'Mafia':
+                EffectToReturn = 'Yes'
+                EffectStrengthToReturn = 'Strong'
+            elif Player1Alignment == 'Mafia' and Player2Alignment == 'Mafia':
+                EffectToReturn = 'No'
+                EffectStrengthToReturn = 'Weak'
+
+    #Next, check revealed investigations
+    for Result in InvestigationResults:
+        if Result['Revealed'] == 'Yes' and Result['Target'] == Player2:
+            if Player1Alignment == 'Town' and Player2Alignment == 'Town':
+                EffectToReturn = 'No'
+                EffectStrengthToReturn = 'Strong'
+            elif Player1Alignment == 'Town' and Player2Alignment == 'Mafia':
+                EffectToReturn = 'Yes'
+                EffectStrengthToReturn = 'Strong'
+            elif Player1Alignment == 'Mafia' and Player2Alignment == 'Town':
+                EffectToReturn = 'No'
+                EffectStrengthToReturn = 'Weak'
+            elif Player1Alignment == 'Mafia' and Player2Alignment == 'Mafia':
+                EffectToReturn = 'Yes'
+                EffectStrengthToReturn = 'Strong'
+
+    return(EffectToReturn, EffectStrengthToReturn)
 
 def NumberOfVotesRequiredToLynch():
     return(math.ceil(float(len(SearchPlayersFor('Alive','==',"'Yes'")))/2))
@@ -507,9 +579,16 @@ def CheckForVictory():
 def ConsiderRevealingInvestigations():
     global InvestigationResults
     for Result in InvestigationResults:
+        WillReveal = 'No'
         if Result['Revealed'] == 'No':
             if GetAttributeFromPlayer(Result['Cop'],'Alive') == "Yes":
-                if randint(1,5) < 4: #Replace this code with something proper
+                if Result['Alignment'] == 'Mafia' and GetAttributeFromPlayer(Result['Cop'],'Alignment') == "Town":
+                    WillReveal = 'Yes'
+                elif Result['Alignment'] != 'Mafia' and GetAttributeFromPlayer(Result['Cop'],'Alignment') == "Mafia":
+                    WillReveal = GetYesOrNoFromProbability('No','Strong')
+                else:
+                    WillReveal = GetYesOrNoFromProbability('No','Weak')
+                if WillReveal == 'Yes':
                     #Assuming that only town can be cops
                     Result['Revealed'] = "Yes"
                     WriteAttributeToPlayer(Result['Cop'],'NumberOfNamesInHat',10)
@@ -655,8 +734,11 @@ def ReceiveRoleBlockingActions():
                 RoleBlockerActiveTonight = "Yes"
             elif RoleBlockerValueFromPlayerlist == IsNumberOddOrEven(Night):
                 RoleBlockerActiveTonight = "Yes"
-            if GetAttributeFromPlayer(RoleBlocker, "CopShots") == 0:
+            if GetAttributeFromPlayer(RoleBlocker, "RoleBlockerShots") == 0:
                 RoleBlockerActiveTonight = "No"
+            if GetAttributeFromPlayer(RoleBlocker, "RoleBlockerShots") > 0:
+                if GetYesOrNoFromProbability('Yes','Weak') == 'No':
+                    RoleBlockerActiveTonight = "No"
             if RoleBlockerActiveTonight == "Yes":
                 if GetAttributeFromPlayer(RoleBlocker,'Alignment') == 'Mafia':
                     PlayerToBeRoleBlocked = TryToPickTownPlayer(RoleBlocker,[])
@@ -694,8 +776,8 @@ def ReceiveBusDrivingActions():
                         InsertSlot1 = BusDrivenPlayer1
                         InsertSlot2 = BusDrivenPlayer2
                     if [InsertSlot1,InsertSlot2] not in BusDrivings:
-                        BusDrivings.append([BusDrivenPlayer1,BusDrivenPlayer2])
                         print("On this night, Player " + str(BusDriver) + " is busdriving Player " + str(BusDrivenPlayer1) + " and Player " + str(BusDrivenPlayer2))
+                        BusDrivings.append([BusDrivenPlayer1,BusDrivenPlayer2])
 
 
 def ReceiveTeamNightKillActions():
@@ -743,6 +825,9 @@ def ReceiveVigilanteKillActions():
                 VigilanteActiveTonight = "No"
             if GetAttributeFromPlayer(Vigilante, "VigilanteShots") == 0:
                 VigilanteActiveTonight = "No"
+            if GetAttributeFromPlayer(Vigilante, "VigilanteShots") > 0:
+                if GetYesOrNoFromProbability('Yes','Weak') == 'No':
+                    VigilanteActiveTonight = "No"
             if VigilanteActiveTonight == "Yes":
                 if GetAttributeFromPlayer(Vigilante,'Alignment') == "Mafia":
                     Target = TryToPickTownPlayer(Vigilante,[])
@@ -772,6 +857,9 @@ def ReceiveDoctorActions():
                 DoctorActiveTonight = "No"
             if GetAttributeFromPlayer(Doctor, "DoctorShots") == 0:
                 DoctorActiveTonight = "No"
+            if GetAttributeFromPlayer(Doctor, "DoctorShots") > 0:
+                if GetYesOrNoFromProbability('Yes','Weak') == 'No':
+                    DoctorActiveTonight = "No"
             if DoctorActiveTonight == "Yes":
                 if GetAttributeFromPlayer(Player,'Alignment') == 'Mafia':
                     PlayerToBeDoctored = TryToPickMafiaPlayer(Player,[])
@@ -781,6 +869,36 @@ def ReceiveDoctorActions():
                     WriteAttributeToPlayer(Doctor, "DoctorShots", GetAttributeFromPlayer(Doctor, "DoctorShots")-1)
                     PlayersTargetedByDoctors.append(PlayerToBeDoctored)
                     print("On this night, Player " + str(Doctor) + " is Doctoring " + str(PlayerToBeDoctored))
+
+
+def ReceiveFriendlyNeighbourActions():
+    global ThisTurnsFriendlyNeighbourActions
+    ThisTurnsFriendlyNeighbourActions = []
+    #Build a list of Friendly Neighbours who will be asked for night actions
+    FriendlyNeighbours = ReturnOneListWithCommonItemsFromTwoLists(SearchPlayersFor("Alive","==","'Yes'"),SearchPlayersFor("FriendlyNeighbour","!=","'No'"))
+    if FriendlyNeighbours != []:
+        for FriendlyNeighbour in FriendlyNeighbours:
+            WillNotTell = []
+            FriendlyNeighbourActiveTonight = "No"
+            #See if this FriendlyNeighbour is to be active on this particular night
+            FriendlyNeighbourValueFromPlayerList = GetAttributeFromPlayer(FriendlyNeighbour,"FriendlyNeighbour")
+            if FriendlyNeighbourValueFromPlayerList == "Yes":
+                FriendlyNeighbourActiveTonight = "Yes"
+            elif FriendlyNeighbourValueFromPlayerList == IsNumberOddOrEven(Night):
+                FriendlyNeighbourActiveTonight = "Yes"
+            if FriendlyNeighbour in PlayersBeingRoleBlocked: #FriendlyNeighbour is inactive if roleblocked
+                FriendlyNeighbourActiveTonight = "No"
+            if GetAttributeFromPlayer(FriendlyNeighbour, "FriendlyNeighbourShots") == 0:
+                FriendlyNeighbourActiveTonight = "No"
+            if GetAttributeFromPlayer(FriendlyNeighbour, "FriendlyNeighbourShots") > 0:
+                if GetYesOrNoFromProbability('Yes','Weak') == 'No':
+                    FriendlyNeighbourActiveTonight = "No"
+            if FriendlyNeighbourActiveTonight == "Yes":
+                Target = TryToPickTownPlayer(FriendlyNeighbour,WillNotTell)
+                if Target != 0:
+                    WriteAttributeToPlayer(FriendlyNeighbour, "FriendlyNeighbourShots", GetAttributeFromPlayer(FriendlyNeighbour, "FriendlyNeighbourShots")-1)
+                    ThisTurnsFriendlyNeighbourActions.append({'FriendlyNeighbour': FriendlyNeighbour, 'Target' : Target})
+                    print("On this night, Player " + str(FriendlyNeighbour) + " is being a Friendly Neighbour and informing Player " + str(Target))
 
 
 def ReceiveCopActions():
@@ -795,7 +913,8 @@ def ReceiveCopActions():
             if len(InvestigationResults) > 0:
                 for Investigation in InvestigationResults:
                     if (Investigation['Cop'] == Cop) or (Investigation['Revealed'] == 'Yes'):
-                        WillNotInvestigate.append(Investigation['Target'])
+                        if GetYesOrNoFromProbability('No','Strong') == 'No': #Probably add to list of people not to investigate
+                            WillNotInvestigate.append(Investigation['Target'])
             CopActiveTonight = "No"
             #See if this Cop is to be active on this particular night
             CopValueFromPlayerList = GetAttributeFromPlayer(Cop,"Cop")
@@ -807,6 +926,9 @@ def ReceiveCopActions():
                 CopActiveTonight = "No"
             if GetAttributeFromPlayer(Cop, "CopShots") == 0:
                 CopActiveTonight = "No"
+            if GetAttributeFromPlayer(Cop, "CopShots") > 0:
+                if GetYesOrNoFromProbability('Yes','Weak') == 'No':
+                    CopActiveTonight = "No"
             if CopActiveTonight == "Yes":
                 if GetAttributeFromPlayer(Cop,'Alignment') == "Mafia":
                     Target = TryToPickTownPlayer(Cop,WillNotInvestigate)

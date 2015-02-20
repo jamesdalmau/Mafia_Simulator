@@ -25,6 +25,7 @@ Alignment="Town"
 ***
 PlayerID = 6
 Alignment="Town"
+ParanoidGunOwner='Yes'
 ***
 PlayerID = 7
 Alignment="Town"
@@ -46,7 +47,7 @@ NightKillResistant=1
 ***
 PlayerID=11
 Alignment="Town"
-BelovedPrincess="Yes"
+BelovedPrincess="Lynch"
 ***
 PlayerID = 12
 Alignment="Town"
@@ -55,7 +56,7 @@ CopShots=5
 ***
 PlayerID = 13
 Alignment="Town"
-Saboteur="Yes"
+Inkbomb="Lynch"
 DeputyCop="Yes"
 ***
 PlayerID = 14
