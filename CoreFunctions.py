@@ -184,6 +184,21 @@ def WriteAttributeToPlayer(PlayerID,Attribute,ValueToWrite): # Change an attribu
 def TryToLynch():
     Candidates = SearchPlayersFor('Alive',"==","'Yes'")
     PlayerWhoWillBeLynched = 0
+
+    #If there's been mafia revealed this day.
+    global MafiaRevealedToday
+    while len(MafiaRevealedToday) > 0 and PlayerWhoWillBeLynched == 0:
+        CandidatePickedFromHat = PickNameFromHatForLynch(MafiaRevealedToday)
+        print("Seeing if we can lynch Revealed Mafia, Player " + str(CandidatePickedFromHat))
+        if GetAttributeFromPlayer(CandidatePickedFromHat,'Alive') == 'Yes':
+            GetsEnoughVotes, ActualVoters = WillGetEnoughLynchVotes(CandidatePickedFromHat)
+            if GetsEnoughVotes == "Yes":    # See if this candidate gets enough votes
+                PlayerWhoWillBeLynched = CandidatePickedFromHat
+            else:
+                Candidates.remove(CandidatePickedFromHat)
+                MafiaRevealedToday.remove(CandidatePickedFromHat)
+
+    #If there's no mafia been revealed this day
     while len(Candidates) > 0 and PlayerWhoWillBeLynched == 0:  # While there are still candidates and no one has been voted for
         #print ("The current candidates for the lynch are " + str(Candidates))
         CandidatePickedFromHat = PickNameFromHatForLynch(Candidates)
@@ -245,12 +260,10 @@ def KillPlayer(Killer,Victim,KillType):
             if KillType == 'Lynch' and GetAttributeFromPlayer(Victim,'LynchBomb') == 'Yes':
                 RandomVoterKilled = PickRandomItemFromList(Killer)
                 print("Player " + str(Victim) + " was a LynchBomb. Random voter, Player " + str(RandomVoterKilled) + ", is targeted by the bomb.")
-                KillPlayer(Victim,[RandomVoterKilled],'LynchBomb')   #Kill random voter
+                KillPlayer(Victim,RandomVoterKilled,'LynchBomb')   #Kill random voter
             elif KillType == 'Night' and GetAttributeFromPlayer(Victim,'NightBomb') == 'Yes':
                 print("Player " + str(Victim) + " was a NightBomb. Their killer, Player " + str(Killer) + ", is targeted by the bomb.")
                 KillPlayer(Victim,Killer,'NightBomb')   #Kill killer
-            else:
-                print("Player " + str(Victim) + " was neither a Lynch Bomb nor a Night Bomb")
 
 
 def PunishAndRewardVotersAfterLynch(Voters,LynchedPlayer):
@@ -584,6 +597,8 @@ def CheckForVictory():
 
 def ConsiderRevealingInvestigations():
     global InvestigationResults
+    global MafiaRevealedToday
+    MafiaRevealedToday = []
     for Result in InvestigationResults:
         WillReveal = 'No'
         if Result['Revealed'] == 'No':
@@ -602,6 +617,7 @@ def ConsiderRevealingInvestigations():
                         WriteAttributeToPlayer(Result['Target'],'NumberOfNamesInHat',10)
                     if Result['Alignment'] == "Mafia":
                         WriteAttributeToPlayer(Result['Target'],'NumberOfNamesInHat',300)
+                        MafiaRevealedToday.append(Result['Target'])
                     print("Player " + str(Result['Cop']) + " just revealed that they investigated Player " + str(Result['Target']) + " and found that they are " + str(Result['Alignment']))
 
 def SimulateSingleGame():
@@ -642,7 +658,7 @@ def SimulateSingleGame():
 def NightRoutine():
     global PlayersBeingRoleBlocked
     global BusDrivings
-    global ThisTurnsInvestigationActions
+    global ThisNightsInvestigationActions
     global InvestigationResults
     global TeamNightKillActions
     global VigilanteActions
@@ -652,7 +668,7 @@ def NightRoutine():
     global NightsOnWhichThereAreNoKills
     PlayersBeingRoleBlocked =[]
     PlayersProtectedByDoctors = []
-    ThisTurnsInvestigationActions = []
+    ThisNightsInvestigationActions = []
     ActualNightKills = []
     ReceiveRoleBlockingActions()
     ReceiveBusDrivingActions()
@@ -695,8 +711,8 @@ def ProcessVigilanteKillActions():
 
 def ProcessCopActions(): 
     global InvestigationResults
-    global ThisTurnsInvestigationActions
-    for Investigation in ThisTurnsInvestigationActions:
+    global ThisNightsInvestigationActions
+    for Investigation in ThisNightsInvestigationActions:
         ActualTarget = FindBusDrivingPairs(Investigation['Target'])
         if len(ActualTarget) == 1: #Investigation fails if busdriving means there's multiple targets
             InvestigationResults.append({'Cop':Investigation['Cop'],'Target':Investigation['Target'],'Alignment':GetAttributeFromPlayer(ActualTarget[0],'Alignment'),'Revealed':'No'})
@@ -808,7 +824,17 @@ def ReceiveTeamNightKillActions():
                 if GetAttributeFromPlayer(ChosenTeamKiller,'Alignment') == "Mafia":
                     Target = TryToPickTownPlayer(ChosenTeamKiller,[])
                 else:
-                    Target = TryToPickMafiaPlayer(ChosenTeamKiller,[])
+                    #First ensure you don't try to nightkill a person your teammate is investigating
+                    PlayersBeingInvestigatedOrDoctoredByTeammates = []
+                    global ThisNightsInvestigationActions
+                    global ThisNightsDoctorActions
+                    for Investigation in ThisNightsInvestigationActions:
+                        if Investigation['Cop'] in ReturnOneListWithCommonItemsFromTwoLists(SearchPlayersFor("Alive","==","'Yes'"),SearchPlayersFor("Team","==",Team)):
+                            PlayersBeingInvestigatedOrDoctoredByTeammates.append(Investigation['Target'])
+                    for Doctoring in ThisNightsDoctorActions:
+                        if Doctoring['Doctor'] in ReturnOneListWithCommonItemsFromTwoLists(SearchPlayersFor("Alive","==","'Yes'"),SearchPlayersFor("Team","==",Team)):
+                            PlayersBeingInvestigatedOrDoctoredByTeammates.append(Doctoring['Target'])
+                    Target = TryToPickMafiaPlayer(ChosenTeamKiller,PlayersBeingInvestigatedOrDoctoredByTeammates)
                 if Target != 0:
                     TeamNightKillActions.append({'Killer': ChosenTeamKiller,'Victim': Target})
                     print("On this night, Player " + str(ChosenTeamKiller) + " is NightKilling Player " + str(Target) + " for team " + str(Team))
@@ -838,7 +864,17 @@ def ReceiveVigilanteKillActions():
                 if GetAttributeFromPlayer(Vigilante,'Alignment') == "Mafia":
                     Target = TryToPickTownPlayer(Vigilante,[])
                 else:
-                    Target = TryToPickMafiaPlayer(Vigilante,[])
+                    PlayersBeingInvestigatedOrDoctoredByTeammates = []
+                    global ThisNightsInvestigationActions
+                    global ThisNightsDoctorActions
+                    if GetAttributeFromPlayer(Vigilante, 'Team') != 0:
+                        for Investigation in ThisNightsInvestigationActions:
+                            if Investigation['Cop'] in ReturnOneListWithCommonItemsFromTwoLists(SearchPlayersFor("Alive","==","'Yes'"),SearchPlayersFor("Team","==",Team)):
+                                PlayersBeingInvestigatedOrDoctoredByTeammates.append(Investigation['Target'])
+                        for Doctoring in ThisNightsDoctorActions:
+                            if Doctoring['Doctor'] in ReturnOneListWithCommonItemsFromTwoLists(SearchPlayersFor("Alive","==","'Yes'"),SearchPlayersFor("Team","==",Team)):
+                                PlayersBeingInvestigatedOrDoctoredByTeammates.append(Doctoring['Target'])
+                    Target = TryToPickMafiaPlayer(Vigilante,PlayersBeingInvestigatedOrDoctoredByTeammates)
                 if Target != 0:
                     WriteAttributeToPlayer(Vigilante, "VigilanteShots", GetAttributeFromPlayer(Vigilante, "VigilanteShots")-1)
                     VigilanteActions.append({'Killer': Vigilante,'Victim': Target})
@@ -848,6 +884,8 @@ def ReceiveVigilanteKillActions():
 def ReceiveDoctorActions():
     global PlayersTargetedByDoctors
     global Night
+    global ThisNightsDoctorActions
+    ThisNightsDoctorActions = []
     PlayersTargetedByDoctors = []
     LivingDoctors = ReturnOneListWithCommonItemsFromTwoLists(SearchPlayersFor('Alive','==',"'Yes'"),SearchPlayersFor("Doctor","!=","'No'"))
     if LivingDoctors != []: #If there are any Doctors
@@ -873,6 +911,7 @@ def ReceiveDoctorActions():
                     PlayerToBeDoctored = TryToPickTownPlayer(Player,[])
                 if PlayerToBeDoctored != 0:
                     WriteAttributeToPlayer(Doctor, "DoctorShots", GetAttributeFromPlayer(Doctor, "DoctorShots")-1)
+                    ThisNightsDoctorActions.append({'Doctor': Doctor, 'Target' : PlayerToBeDoctored})
                     PlayersTargetedByDoctors.append(PlayerToBeDoctored)
                     print("On this night, Player " + str(Doctor) + " is Doctoring " + str(PlayerToBeDoctored))
 
@@ -908,8 +947,8 @@ def ReceiveFriendlyNeighbourActions():
 
 
 def ReceiveCopActions():
-    global ThisTurnsInvestigationActions
-    ThisTurnsInvestigationActions = []
+    global ThisNightsInvestigationActions
+    ThisNightsInvestigationActions = []
     #Build a list of cops who will be asked for night actions
     Cops = ReturnOneListWithCommonItemsFromTwoLists(SearchPlayersFor("Alive","==","'Yes'"),SearchPlayersFor("Cop","!=","'No'"))
     if Cops != []:
@@ -942,7 +981,7 @@ def ReceiveCopActions():
                     Target = TryToPickMafiaPlayer(Cop,WillNotInvestigate)
                 if Target != 0:
                     WriteAttributeToPlayer(Cop, "CopShots", GetAttributeFromPlayer(Cop, "CopShots")-1)
-                    ThisTurnsInvestigationActions.append({'Cop': Cop, 'Target' : Target})
+                    ThisNightsInvestigationActions.append({'Cop': Cop, 'Target' : Target})
                     print("On this night, Player " + str(Cop) + " is Investigating Player " + str(Target))
 
 
