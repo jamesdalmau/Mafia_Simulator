@@ -37,6 +37,7 @@ PlayerID=8
 Alignment="Town"
 LynchBomb='Yes'
 NightBomb='Yes'
+FriendlyNeighbour="Yes"
 ***
 PlayerID=9
 Alignment="Town"

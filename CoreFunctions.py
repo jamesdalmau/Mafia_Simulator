@@ -25,6 +25,8 @@ def InitiateSingleGameVariables(): # Set up variables to run a single game
     NightsOnWhichThereAreNoKills = []   #This is needed for the Inkbomb
     global InvestigationResults
     InvestigationResults = []
+    global FriendlyNeighbourResults
+    FriendlyNeighbourResults = []
     global WinningTeam
     WinningTeam = ''
 
@@ -187,19 +189,16 @@ def TryToLynch():
 
     #If there's been mafia revealed this day.
     global MafiaRevealedToday
-    while len(MafiaRevealedToday) > 0 and PlayerWhoWillBeLynched == 0:
-        CandidatePickedFromHat = PickNameFromHatForLynch(MafiaRevealedToday)
+    LivingMafiaRevealedToday = ReturnOneListWithCommonItemsFromTwoLists(MafiaRevealedToday,SearchPlayersFor('Alive','==',"'Yes'"))
+    while len(LivingMafiaRevealedToday) > 0 and PlayerWhoWillBeLynched == 0:
+        CandidatePickedFromHat = PickNameFromHatForLynch(LivingMafiaRevealedToday)
         print("Seeing if we can lynch Revealed Mafia, Player " + str(CandidatePickedFromHat))
-        if GetAttributeFromPlayer(CandidatePickedFromHat,'Alive') == 'Yes':
-            GetsEnoughVotes, ActualVoters = WillGetEnoughLynchVotes(CandidatePickedFromHat)
-            if GetsEnoughVotes == "Yes":    # See if this candidate gets enough votes
-                PlayerWhoWillBeLynched = CandidatePickedFromHat
-            else:
-                Candidates.remove(CandidatePickedFromHat)
-                MafiaRevealedToday.remove(CandidatePickedFromHat)
+        GetsEnoughVotes, ActualVoters = WillGetEnoughLynchVotes(CandidatePickedFromHat)
+        if GetsEnoughVotes == "Yes":    # See if this candidate gets enough votes
+            PlayerWhoWillBeLynched = CandidatePickedFromHat
         else:
             Candidates.remove(CandidatePickedFromHat)
-            MafiaRevealedToday.remove(CandidatePickedFromHat)
+            LivingMafiaRevealedToday.remove(CandidatePickedFromHat)
 
 
     #If there's no mafia been revealed this day
@@ -670,18 +669,22 @@ def NightRoutine():
     global PlayersProtectedByDoctors
     global ActualNightKills
     global NightsOnWhichThereAreNoKills
+    global ThisTurnsFriendlyNeighbourActions
     PlayersBeingRoleBlocked =[]
     PlayersProtectedByDoctors = []
     ThisNightsInvestigationActions = []
+    ThisTurnsFriendlyNeighbourActions = []
     ActualNightKills = []
     ReceiveRoleBlockingActions()
     ReceiveBusDrivingActions()
     ReceiveCopActions()
     ReceiveDoctorActions()
+    ReceiveFriendlyNeighbourActions()
     ReceiveTeamNightKillActions()
     ReceiveVigilanteKillActions()
     ProcessCopActions()
     ProcessDoctorActions()
+    ProcessFriendlyNeighbourActions()
     ProcessTeamNightKillActions()
     ProcessVigilanteKillActions()
     if Night not in NightsOnWhichThereAreNoKills:
@@ -720,6 +723,15 @@ def ProcessCopActions():
         ActualTarget = FindBusDrivingPairs(Investigation['Target'])
         if len(ActualTarget) == 1: #Investigation fails if busdriving means there's multiple targets
             InvestigationResults.append({'Cop':Investigation['Cop'],'Target':Investigation['Target'],'Alignment':GetAttributeFromPlayer(ActualTarget[0],'Alignment'),'Revealed':'No'})
+
+
+def ProcessFriendlyNeighbourActions():
+    global FriendlyNeighbourResults
+    global ThisTurnsFriendlyNeighbourActions
+    for FriendlyNeighbourAction in ThisTurnsFriendlyNeighbourActions:
+        ActualTarget = FindBusDrivingPairs(FriendlyNeighbourAction['Target'])
+        for Target in ActualTarget:
+            FriendlyNeighbourResults.append({'Teller':FriendlyNeighbourAction['FriendlyNeighbour'],'Listener':Target,'IntendedListener':FriendlyNeighbourAction['Target'],'Revealed':'No'})
 
 
 def ProcessTeamNightKillActions():
@@ -922,6 +934,7 @@ def ReceiveDoctorActions():
 
 def ReceiveFriendlyNeighbourActions():
     global ThisTurnsFriendlyNeighbourActions
+    global FriendlyNeighbourResults
     ThisTurnsFriendlyNeighbourActions = []
     #Build a list of Friendly Neighbours who will be asked for night actions
     FriendlyNeighbours = ReturnOneListWithCommonItemsFromTwoLists(SearchPlayersFor("Alive","==","'Yes'"),SearchPlayersFor("FriendlyNeighbour","!=","'No'"))
@@ -943,6 +956,15 @@ def ReceiveFriendlyNeighbourActions():
                 if GetYesOrNoFromProbability('Yes','Weak') == 'No':
                     FriendlyNeighbourActiveTonight = "No"
             if FriendlyNeighbourActiveTonight == "Yes":
+                WillNotTell = []
+                #Build a list of people who this neighbour has previously targeted, or who is in their team.
+                if len(FriendlyNeighbourResults) > 0:
+                    for FriendlyNeighbourResult in FriendlyNeighbourResults:
+                        if (Investigation['Cop'] == Cop) or (Investigation['Revealed'] == 'Yes'):
+                            if GetYesOrNoFromProbability('No','Strong') == 'No': #Probably add to list of people not to investigate
+                                WillNotInvestigate.append(Investigation['Target'])
+
+
                 Target = TryToPickTownPlayer(FriendlyNeighbour,WillNotTell)
                 if Target != 0:
                     WriteAttributeToPlayer(FriendlyNeighbour, "FriendlyNeighbourShots", GetAttributeFromPlayer(FriendlyNeighbour, "FriendlyNeighbourShots")-1)
