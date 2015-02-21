@@ -69,7 +69,7 @@ def TestForDeputies(DyingPlayer):
 def TestForDeputy(DyingPlayer,RoleType):
     FoundDeputy = 0
     if GetAttributeFromPlayer(DyingPlayer,RoleType) != 'No': #Test for deputy
-        print("Dying player was a " + RoleType + " Looking for deputies.")
+        print("Dying player was a " + RoleType + ". Looking for deputies.")
         PossibleDeputies = []
         LivingDeputiesOfSameAlignmentAndTeam = []
         LivingDeputiesOfSameAlignment = ReturnOneListWithCommonItemsFromThreeLists(SearchPlayersFor('Alignment','==',"'" + GetAttributeFromPlayer(DyingPlayer,'Alignment') + "'"),SearchPlayersFor('Alive','==',"'Yes'"),SearchPlayersFor('Deputy' + RoleType,'==',"'Yes'"))
@@ -93,7 +93,7 @@ def TestForDeputy(DyingPlayer,RoleType):
         WriteAttributeToPlayer(FoundDeputy,'Deputy' + RoleType,'No')
 
 
-def ReturnLivingParanoidGunOwners:
+def ReturnLivingParanoidGunOwners():
     return(ReturnOneListWithCommonItemsFromTwoLists(SearchPlayersFor('Alive','==','Yes'),SearchPlayersFor('ParanoidGunOwner','==','Yes')))
 
 
@@ -213,6 +213,8 @@ def KillPlayer(Killer,Victim,KillType):
             print("Player was night-kill-resistant.")
         else:
             ResistancesOvercome = "Yes"
+    if KillType == "LynchBomb" or KillType == "NightBomb":
+        ResistancesOvercome = "Yes"
     if ResistancesOvercome == "Yes": #Proceed if resistances are overcome
         KillBecomesConvert = "No"   #Check whether kill fails because player is Judas or Saulus
         if GetAttributeFromPlayer(Victim,'Judas') == 'Yes' and GetAttributeFromPlayer(Victim,'Alignment') == 'Town': #If Player is a Judas
@@ -240,8 +242,6 @@ def KillPlayer(Killer,Victim,KillType):
                 print("Player " + str(Victim) + " was a Inkbomb! There can be no night kills on " + str(NightOnWhichThereWillBeNoKills) + ".")
                 global NightsOnWhichThereAreNoKills
                 NightsOnWhichThereAreNoKills.append(NightOnWhichThereWillBeNoKills)
-            print('LynchBomb = ' + str(GetAttributeFromPlayer(Victim,'LynchBomb')))
-            print('NightBomb = ' + str(GetAttributeFromPlayer(Victim,'NightBomb')))
             if KillType == 'Lynch' and GetAttributeFromPlayer(Victim,'LynchBomb') == 'Yes':
                 RandomVoterKilled = PickRandomItemFromList(Killer)
                 print("Player " + str(Victim) + " was a LynchBomb. Random voter, Player " + str(RandomVoterKilled) + ", is targeted by the bomb.")
@@ -254,15 +254,21 @@ def KillPlayer(Killer,Victim,KillType):
 
 
 def PunishAndRewardVotersAfterLynch(Voters,LynchedPlayer):
+    MinimumProbability = 1.3
+    MaximumProbability = 3
+    CriticalProportion = .6
+    ProportionOfPlayers = len(SearchPlayersFor('Alive','==',"'Yes'")) / len(PlayerList)
+    Probability = ((MaximumProbability - MinimumProbability) / (CriticalProportion - MaximumProbability) * (ProportionOfPlayers - MaximumProbability)) + MinimumProbability
+    Probability = max(Probability, MinimumProbability)
     AlignmentOfDeadPlayer = GetAttributeFromPlayer(LynchedPlayer,'Alignment')
     #Punish and reward the voters
     for Voter in Voters:
         if AlignmentOfDeadPlayer == 'Mafia':
-            ChangeToNumberOfNamesInHat = math.ceil(Day * 1.3 * randint(3,5))
+            ChangeToNumberOfNamesInHat = math.ceil(Probability * randint(4,8))
             NewNumber=GetAttributeFromPlayer(Voter,'NumberOfNamesInHat')-ChangeToNumberOfNamesInHat
             print("Player " + str(Voter) + " voted to lynch a mafia.")
         elif AlignmentOfDeadPlayer == 'Town':
-            ChangeToNumberOfNamesInHat = math.ceil(Day * 1.3 * randint(3,5))
+            ChangeToNumberOfNamesInHat = math.ceil(Probability * randint(4,8))
             NewNumber=GetAttributeFromPlayer(Voter,'NumberOfNamesInHat')+ChangeToNumberOfNamesInHat
             print("Player " + str(Voter) + " voted to lynch a town.")
         if NewNumber<0:
@@ -275,11 +281,11 @@ def PunishAndRewardVotersAfterLynch(Voters,LynchedPlayer):
         if NonVoter != LynchedPlayer:
             if NonVoter not in Voters:
                 if AlignmentOfDeadPlayer == 'Mafia':
-                    ChangeToNumberOfNamesInHat = math.ceil(Day * 1.3 * randint(2,4))
+                    ChangeToNumberOfNamesInHat = math.ceil(Probability * randint(3,7))
                     NewNumber = GetAttributeFromPlayer(NonVoter,'NumberOfNamesInHat')+ChangeToNumberOfNamesInHat
                     print("Player " + str(NonVoter) + " didn't vote to lynch a mafia.")
                 elif AlignmentOfDeadPlayer == 'Town':
-                    ChangeToNumberOfNamesInHat = math.ceil(Day * 1.3 * randint(2,4))
+                    ChangeToNumberOfNamesInHat = math.ceil(Probability * randint(3,7))
                     NewNumber = GetAttributeFromPlayer(NonVoter,'NumberOfNamesInHat')-ChangeToNumberOfNamesInHat
                     print("Player " + str(NonVoter) + " didn't vote to lynch a town.")
                 if NewNumber<0:
@@ -392,8 +398,6 @@ def TryToPickMafiaPlayer(PlayerWhoIsChoosing,PlayersNotEligible):
     else:
         return(0)
 
-
-
 def WillGetEnoughLynchVotes(TargetPlayerID):
     NotTargetPlayers = SearchPlayersFor('PlayerID','!=',str(TargetPlayerID))
     LivingPlayers = SearchPlayersFor('Alive','==',"'Yes'")
@@ -420,11 +424,13 @@ def DoesPlayer1VoteForPlayer2(Player1,Player2):
         # Test to see if the vote will be nullified because of teams
         if (GetAttributeFromPlayer(Player1,'Team') != 0) and (GetAttributeFromPlayer(Player1,'Team') == GetAttributeFromPlayer(Player2,'Team')):
             if GetAttributeFromPlayer(Player1,'Alignment') == 'Mafia':
-                print("Player " + str(Player1) + " is refusing to vote for Player " + str(Player2) + " because they are on the same mafia team.")
-                Effect = 'No'
-                EffectStrength = 'Weak'
+                if GetAttributeFromPlayer(Player2,'Inkbomb') == 'Yes':
+                    Effect = 'No'
+                    EffectStrength = 'Weak'
+                else:
+                    Effect = 'No'
+                    EffectStrength = 'Strong'
             elif GetAttributeFromPlayer(Player1,'Alignment') == 'Town':
-                print("Player " + str(Player1) + " is refusing to vote for Player " + str(Player2) + " because they are on the same town team.")
                 Effect = 'No'
                 EffectStrength = 'Definite'
     if Effect == 'No' and EffectStrength == 'Definite':
@@ -508,8 +514,8 @@ def EffectOfInvestigationsOnVote(Player1,Player2):
                 EffectToReturn = 'Yes'
                 EffectStrengthToReturn = 'Strong'
             elif Player1Alignment == 'Mafia' and Player2Alignment == 'Town':
-                EffectToReturn = 'No'
-                EffectStrengthToReturn = 'Weak'
+                EffectToReturn = 'None'
+                EffectStrengthToReturn = 'None'
             elif Player1Alignment == 'Mafia' and Player2Alignment == 'Mafia':
                 EffectToReturn = 'Yes'
                 EffectStrengthToReturn = 'Strong'
