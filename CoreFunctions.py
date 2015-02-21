@@ -197,6 +197,10 @@ def TryToLynch():
             else:
                 Candidates.remove(CandidatePickedFromHat)
                 MafiaRevealedToday.remove(CandidatePickedFromHat)
+        else:
+            Candidates.remove(CandidatePickedFromHat)
+            MafiaRevealedToday.remove(CandidatePickedFromHat)
+
 
     #If there's no mafia been revealed this day
     while len(Candidates) > 0 and PlayerWhoWillBeLynched == 0:  # While there are still candidates and no one has been voted for
