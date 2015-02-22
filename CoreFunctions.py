@@ -19,6 +19,8 @@ def InitiateSingleGameVariables(): # Set up variables to run a single game
     Day = 0
     global Night
     Night = 0
+    global TimeCounter
+    TimeCounter = 0
     global DaysThatDoNotHappen
     DaysThatDoNotHappen = []    #This is needed for the Beloved Princess
     global NightsOnWhichThereAreNoKills
@@ -326,6 +328,12 @@ def TryToPickTownPlayer(PlayerWhoIsChoosing,PlayersNotEligible):
     Hat = []
     PlayersTeam = GetAttributeFromPlayer(PlayerWhoIsChoosing,"Team")
     PlayersAlignment = GetAttributeFromPlayer(PlayerWhoIsChoosing,"Alignment")
+    if PlayersTeam != 0:
+        PlayersTeamMates = ReturnOneListWithCommonItemsFromThreeLists(SearchPlayersFor('Alive','==',"'Yes'"), SearchPlayersFor('PlayerID','!=',PlayerWhoIsChoosing), SearchPlayersFor('Team','==',PlayersTeam))
+    else:
+        PlayersTeamMates = []
+    global FriendlyNeighbourResults
+    global InvestigationResults
     if PlayersTeam == 0:
         #If the player is not on a team, the pool of possible townies is everyone who is still alive
         UnfilteredListOfPlayersForHat = ReturnOneListWithCommonItemsFromTwoLists(SearchPlayersFor("Alive","==","'Yes'"),SearchPlayersFor("PlayerID","!=",PlayerWhoIsChoosing))
@@ -350,8 +358,39 @@ def TryToPickTownPlayer(PlayerWhoIsChoosing,PlayersNotEligible):
                 NumberOfTimesToGoInHat = 100 - (NumberOfNamesFromPlayerList - 100)
             else:
                 NumberOfTimesToGoInHat = 100 + (100 - NumberOfNamesFromPlayerList)
+            # Increase chances for person who is known to be town through Friendly Neighbour
+            if len(FriendlyNeighbourResults) > 0:
+                for FriendlyNeighbourResult in FriendlyNeighbourResults:
+                    if FriendlyNeighbourResult['Teller'] == PlayerInHat:
+                        if PlayerWhoIsChoosing == FriendlyNeighbourResult['Listener']:
+                            NumberOfTimesToGoInHat = NumberOfTimesToGoInHat * 3
+                        elif FriendlyNeighbourResult['Listener'] in PlayersTeamMates:
+                            NumberOfTimesToGoInHat = int(NumberOfTimesToGoInHat * 2.5)
+                        elif FriendlyNeighbourResult['Revealed'] == 'Yes':
+                            NumberOfTimesToGoInHat = int(NumberOfTimesToGoInHat * 2.5)
+            # Increase chances for person who is known to be town through investigations (either as cops or as targets)
+            if len(InvestigationResults) > 0:
+                for Investigation in InvestigationResults:
+                    if Investigation['Target'] == PlayerInHat:
+                        if PlayerWhoIsChoosing == Investigation['Cop']:
+                            if Investigation['Alignment'] == 'Town':
+                                NumberOfTimesToGoInHat = NumberOfTimesToGoInHat * 3
+                            elif Investigation['Alignment'] == 'Mafia':
+                                NumberOfTimesToGoInHat = int(NumberOfTimesToGoInHat / 3)
+                        elif Investigation['Cop'] in PlayersTeamMates:
+                            if Investigation['Alignment'] == 'Town':
+                                NumberOfTimesToGoInHat = int(NumberOfTimesToGoInHat * 2.5)
+                            elif Investigation['Alignment'] == 'Mafia':
+                                NumberOfTimesToGoInHat = int(NumberOfTimesToGoInHat / 2)
+                        elif FriendlyNeighbourResult['Revealed'] == 'Yes':
+                            if Investigation['Alignment'] == 'Town':
+                                NumberOfTimesToGoInHat = int(NumberOfTimesToGoInHat * 2)
+                            elif Investigation['Alignment'] == 'Mafia':
+                                NumberOfTimesToGoInHat = int(NumberOfTimesToGoInHat / 1.5)
+            # Increase chance for Innocent Children
             if GetAttributeFromPlayer(PlayerInHat,'InnocentChild') == "Yes":
                 NumberOfTimesToGoInHat = NumberOfTimesToGoInHat * 3
+            # Increase chances for person who is on same town team
             if PlayersTeam != 0 and PlayersAlignment == "Town":
                 if PlayersTeam == int(GetAttributeFromPlayer(PlayerInHat,"'Team'")):
                     NumberOfTimesToGoInHat = NumberOfTimesToGoInHat * 3
@@ -433,30 +472,92 @@ def WillGetEnoughLynchVotes(TargetPlayerID):
     return('No',[])
 
 
+def EffectOfFriendlyNeighbourResults(Player1,Player2,Player1Team,Player1Alignment):
+    EffectToReturn = "None"
+    EffectStrengthToReturn = "None"
+    if Player1Team != 0:
+        Player1TeamMates = ReturnOneListWithCommonItemsFromThreeLists(SearchPlayersFor('Alive','==',"'Yes'"), SearchPlayersFor('PlayerID','!=',Player1), SearchPlayersFor('Team','==',Player1Team))
+    else:
+        Player1TeamMates = []
+    global FriendlyNeighbourResults
+    if len(FriendlyNeighbourResults) > 0:
+        for FriendlyNeighbourResult in FriendlyNeighbourResults:
+            if FriendlyNeighbourResult['Teller'] == Player2:
+                if Player1 == FriendlyNeighbourResult['Listener']:
+                    if Player1Alignment == 'Town':
+                        Effect = "No"
+                        EffectStrength = 'Definite'
+                    elif Player1Alignment == 'Mafia':
+                        if FriendlyNeighbourResult['Revealed'] == 'No':
+                            Effect = "Yes"
+                            EffectStrength = 'Strong'
+                        elif FriendlyNeighbourResult['Revealed'] == 'Yes':
+                            Effect = "No"
+                            EffectStrength = 'Strong'
+                if FriendlyNeighbourResult['Listener'] in Player1TeamMates:
+                    if Player1Alignment == 'Mafia' and FriendlyNeighbourResult['Revealed'] == 'No':
+                        Effect = "Yes"
+                        EffectStrength = "Strong"
+                    else:
+                        Effect = "No"
+                        EffectStrength = 'Strong'
+                if FriendlyNeighbourResult['Revealed'] == 'Yes' and Player1 != FriendlyNeighbourResult['Listener'] and FriendlyNeighbourResult['Listener'] not in Player1TeamMates:
+                    Effect = "No"
+                    EffectStrength = 'Strong'
+    return(EffectToReturn, EffectStrengthToReturn)
+
+
 def DoesPlayer1VoteForPlayer2(Player1,Player2):
     AnswerToReturn = 'Yes'    # The default assumption is that the vote will be cast.
-    Effect, EffectStrength = EffectOfInvestigationsOnVote(Player1, Player2)
+    Player1Alignment = GetAttributeFromPlayer(Player1,'Alignment')
+    Player1Team = GetAttributeFromPlayer(Player1,'Team')
+    Effect, EffectStrength = EffectOfInvestigationsOnLynchVote(Player1, Player2, Player1Team, Player1Alignment)
     if Effect != 'No' and EffectStrength != 'Strong' and EffectStrength != 'Definite': # If the investigations don't mean there's a refusal
+        Effect, EffectStrength = EffectOfFriendlyNeighbourResults(Player1, Player2, Player1Team, Player1Alignment)
+    if Effect != 'No' and EffectStrength != 'Strong' and EffectStrength != 'Definite': # If the investigations and neighbours don't mean there's a refusal
         # Test to see if the vote will be nullified because of teams
-        if (GetAttributeFromPlayer(Player1,'Team') != 0) and (GetAttributeFromPlayer(Player1,'Team') == GetAttributeFromPlayer(Player2,'Team')):
-            if GetAttributeFromPlayer(Player1,'Alignment') == 'Mafia':
+        if (Player1Team != 0) and (Player1Team == GetAttributeFromPlayer(Player2,'Team')):
+            if Player1Alignment == 'Mafia':
                 if GetAttributeFromPlayer(Player2,'Inkbomb') == 'Yes':
                     Effect = 'No'
                     EffectStrength = 'Weak'
                 else:
                     Effect = 'No'
                     EffectStrength = 'Strong'
-            elif GetAttributeFromPlayer(Player1,'Alignment') == 'Town':
+            elif Player1Team == 'Town':
                 Effect = 'No'
                 EffectStrength = 'Definite'
     if Effect == 'No' and EffectStrength == 'Definite':
-        AnswerToReturn = 'Yes'
+        AnswerToReturn = 'No'
     else:
-        AnswerToReturn = GetYesOrNoFromProbability(Effect,EffectStrength)
+        if Effect == "None" and EffectStrength == "None":
+            Effect = "Yes"
+            EffectStrength = "Strong"
+        AnswerToReturn = GetYesOrNoFromStableProbability(Effect,EffectStrength)
     return(AnswerToReturn)
 
 
-def GetYesOrNoFromProbability(Effect,EffectStrength):
+def GetYesOrNoFromStableProbability(Effect,EffectStrength):
+    if Effect == 'Yes':
+        if EffectStrength == 'Strong':
+            ProbabilityPercentage = 90
+        elif EffectStrength == 'Weak':
+            ProbabilityPercentage = 75
+    if Effect == 'No':
+        if EffectStrength == 'Strong':
+            ProbabilityPercentage = 10
+        elif EffectStrength == 'Weak':
+            ProbabilityPercentage = 25
+    RandomNumber = randint(1,100)
+    if RandomNumber < ProbabilityPercentage:
+#        print("Random Number " + str(RandomNumber) + " was lower than " + str(ProbabilityPercentage))
+        return('Yes')
+    else:
+#        print("Random Number " + str(RandomNumber) + " was equal to or higher than " + str(ProbabilityPercentage))
+        return('No')
+
+
+def GetYesOrNoFromChangingProbability(Effect,EffectStrength):
     global PlayerList
     MinimumProbability = .5
     MaximumProbability = .95
@@ -489,21 +590,18 @@ def GetYesOrNoFromProbability(Effect,EffectStrength):
     else:
 #        print("Random Number " + str(RandomNumber) + " was equal to or higher than " + str(ProbabilityPercentage))
         return('No')
-    
-def EffectOfInvestigationsOnVote(Player1,Player2):
+
+def EffectOfInvestigationsOnLynchVote(Player1,Player2,Player1TeamNumber,Player1Alignment):
     global InvestigationResults
     EffectToReturn = "None"
     EffectStrengthToReturn = "None"
-    Player1Alignment = GetAttributeFromPlayer(Player1,'Alignment')
     Player2Alignment = GetAttributeFromPlayer(Player2,'Alignment')
 
     #First, build a list of all living players in the team
-    PlayersInPlayer1Team = [Player1]
-    Player1Team = [GetAttributeFromPlayer(Player1,'Team')]
-    if Player1Team != 0:
-        TeamMembers = ReturnOneListWithCommonItemsFromTwoLists(SearchPlayersFor('Alive','==',"'Yes'"),SearchPlayersFor('Team','==',Player1Team))
+    Player1Team = [Player1]
+    if Player1TeamNumber != 0:
+        TeamMembers = ReturnOneListWithCommonItemsFromTwoLists(SearchPlayersFor('Alive','==',"'Yes'"),SearchPlayersFor('Team','==',Player1TeamNumber))
         if len(TeamMembers) != 0:
-            Player1Team = []
             for TeamMember in TeamMembers:
                 Player1Team.append(TeamMember)
 
@@ -598,6 +696,14 @@ def CheckForVictory():
         WinningTeam = "Mafia"
 
 
+def ConsiderRevealingFriendlyNeighbours():
+    global FriendlyNeighbourResults
+    for Result in FriendlyNeighbourResults:
+        if Result['Revealed'] == 'No' and GetAttributeFromPlayer(Result['Listener'],'Alive') == 'Yes' and GetAttributeFromPlayer(Result['Teller'],'Alive') == 'Yes' and GetAttributeFromPlayer(Result['Listener'],'Alignment') == 'Town':
+            if GetYesOrNoFromChangingProbability('Yes','Weak'):
+                print("Player " + str(Result['Listener']) + " is revealing that Player " + str(Result ['Teller']) + " is a Friendly Neighbour.")
+                Result['Revealed'] = 'Yes'
+
 def ConsiderRevealingInvestigations():
     global InvestigationResults
     global MafiaRevealedToday
@@ -607,11 +713,11 @@ def ConsiderRevealingInvestigations():
         if Result['Revealed'] == 'No':
             if GetAttributeFromPlayer(Result['Cop'],'Alive') == "Yes":
                 if Result['Alignment'] == 'Mafia' and GetAttributeFromPlayer(Result['Cop'],'Alignment') == "Town":
-                    WillReveal = 'Yes'
+                    WillReveal = GetYesOrNoFromChangingProbability('Yes','Strong')
                 elif Result['Alignment'] != 'Mafia' and GetAttributeFromPlayer(Result['Cop'],'Alignment') == "Mafia":
-                    WillReveal = GetYesOrNoFromProbability('No','Strong')
+                    WillReveal = GetYesOrNoFromChangingProbability('No','Strong')
                 else:
-                    WillReveal = GetYesOrNoFromProbability('No','Weak')
+                    WillReveal = GetYesOrNoFromChangingProbability('No','Weak')
                 if WillReveal == 'Yes':
                     #Assuming that only town can be cops
                     Result['Revealed'] = "Yes"
@@ -628,15 +734,18 @@ def SimulateSingleGame():
     global DaysThatDoNotHappen
     global Day
     global Night
+    global TimeCounter
     global WinningTeam
     while WinningTeam == '':
         Day += 1
         Night += 1
+        TimeCounter += 1
         #Day cycle
         print()
         print("Day " + str(Day))
         if not Day in DaysThatDoNotHappen:
             ConsiderRevealingInvestigations()
+            ConsiderRevealingFriendlyNeighbours()
             TryToLynch()
         CheckForVictory()
         LivingPlayers = SearchPlayersFor('Alive','==',"'Yes'")
@@ -645,6 +754,7 @@ def SimulateSingleGame():
             DayOrNightWhenGameEnded = "D" + str(Day)
         else:   #If no winning team at the end of the day, do the night
             #Night cycle
+            TimeCounter += 1
             print()
             print("Night " + str(Night))
             NightRoutine()
@@ -656,6 +766,7 @@ def SimulateSingleGame():
     LivingPlayers = SearchPlayersFor('Alive','==',"'Yes'")
     print()
     print("Winners = " + WinningTeam)
+    print("Ending moment = " + str(TimeCounter) + "(" + str(DayOrNightWhenGameEnded) + ")")
 
 
 def NightRoutine():
@@ -729,10 +840,13 @@ def ProcessFriendlyNeighbourActions():
     global FriendlyNeighbourResults
     global ThisTurnsFriendlyNeighbourActions
     for FriendlyNeighbourAction in ThisTurnsFriendlyNeighbourActions:
+        #print("Processing Friendly Neighour: " + str(FriendlyNeighbourAction))
         ActualTarget = FindBusDrivingPairs(FriendlyNeighbourAction['Target'])
+        #print("The Friendly Neighbour Actual Target is " + str(ActualTarget))
         for Target in ActualTarget:
+            #print("adding a target!")
             FriendlyNeighbourResults.append({'Teller':FriendlyNeighbourAction['FriendlyNeighbour'],'Listener':Target,'IntendedListener':FriendlyNeighbourAction['Target'],'Revealed':'No'})
-
+    #print("After processing Friendly Neighbours, FriendlyNeighbourResults = " + str(FriendlyNeighbourResults))
 
 def ProcessTeamNightKillActions():
     global TeamNightKillActions
@@ -747,14 +861,20 @@ def ProcessTeamNightKillActions():
 def FindBusDrivingPairs(PlayerID):
     ReturnedPlayerIDs = []
     global BusDrivings
+    #print("BusDrivings = " + str(BusDrivings))
     if BusDrivings == []:
-        return([PlayerID])
+        #print("No Busdrivings.")
+        ReturnedPlayerIDs.append(PlayerID)
     else:
+        #print("Some Busdrivings.")
         for BusDriving in BusDrivings:
             if BusDriving[0] == PlayerID:
                 ReturnedPlayerIDs.append(BusDriving[1])
             elif BusDriving[1] == PlayerID:
                 ReturnedPlayerIDs.append(BusDriving[0])
+            else:
+                ReturnedPlayerIDs.append(PlayerID)
+    #print("Returning " + str(ReturnedPlayerIDs))
     return(ReturnedPlayerIDs)
 
 
@@ -775,7 +895,7 @@ def ReceiveRoleBlockingActions():
             if GetAttributeFromPlayer(RoleBlocker, "RoleBlockerShots") == 0:
                 RoleBlockerActiveTonight = "No"
             if GetAttributeFromPlayer(RoleBlocker, "RoleBlockerShots") > 0:
-                if GetYesOrNoFromProbability('Yes','Weak') == 'No':
+                if GetYesOrNoFromChangingProbability('Yes','Weak') == 'No':
                     RoleBlockerActiveTonight = "No"
             if RoleBlockerActiveTonight == "Yes":
                 if GetAttributeFromPlayer(RoleBlocker,'Alignment') == 'Mafia':
@@ -805,7 +925,9 @@ def ReceiveBusDrivingActions():
                 BusDriverActiveTonight = "No"
             if BusDriverActiveTonight == "Yes":
                 BusDrivenPlayer1 = TryToPickMafiaPlayer(BusDriver,[])
-                BusDrivenPlayer2 = TryToPickTownPlayer(BusDriver,[])
+                ExcludedPlayers = []
+                ExcludedPlayers.append(BusDrivenPlayer1)
+                BusDrivenPlayer2 = TryToPickTownPlayer(BusDriver,ExcludedPlayers)
                 if (BusDrivenPlayer1 != 0) and (BusDrivenPlayer2 != 0):
                     if BusDrivenPlayer1 > BusDrivenPlayer2:
                         InsertSlot1 = BusDrivenPlayer2
@@ -874,7 +996,7 @@ def ReceiveVigilanteKillActions():
             if GetAttributeFromPlayer(Vigilante, "VigilanteShots") == 0:
                 VigilanteActiveTonight = "No"
             if GetAttributeFromPlayer(Vigilante, "VigilanteShots") > 0:
-                if GetYesOrNoFromProbability('Yes','Weak') == 'No':
+                if GetYesOrNoFromChangingProbability('Yes','Weak') == 'No':
                     VigilanteActiveTonight = "No"
             if VigilanteActiveTonight == "Yes":
                 if GetAttributeFromPlayer(Vigilante,'Alignment') == "Mafia":
@@ -918,7 +1040,7 @@ def ReceiveDoctorActions():
             if GetAttributeFromPlayer(Doctor, "DoctorShots") == 0:
                 DoctorActiveTonight = "No"
             if GetAttributeFromPlayer(Doctor, "DoctorShots") > 0:
-                if GetYesOrNoFromProbability('Yes','Weak') == 'No':
+                if GetYesOrNoFromChangingProbability('Yes','Weak') == 'No':
                     DoctorActiveTonight = "No"
             if DoctorActiveTonight == "Yes":
                 if GetAttributeFromPlayer(Player,'Alignment') == 'Mafia':
@@ -953,18 +1075,21 @@ def ReceiveFriendlyNeighbourActions():
             if GetAttributeFromPlayer(FriendlyNeighbour, "FriendlyNeighbourShots") == 0:
                 FriendlyNeighbourActiveTonight = "No"
             if GetAttributeFromPlayer(FriendlyNeighbour, "FriendlyNeighbourShots") > 0:
-                if GetYesOrNoFromProbability('Yes','Weak') == 'No':
+                if GetYesOrNoFromChangingProbability('Yes','Weak') == 'No':
                     FriendlyNeighbourActiveTonight = "No"
             if FriendlyNeighbourActiveTonight == "Yes":
                 WillNotTell = []
                 #Build a list of people who this neighbour has previously targeted, or who is in their team.
-                if len(FriendlyNeighbourResults) > 0:
-                    for FriendlyNeighbourResult in FriendlyNeighbourResults:
-                        if (Investigation['Cop'] == Cop) or (Investigation['Revealed'] == 'Yes'):
-                            if GetYesOrNoFromProbability('No','Strong') == 'No': #Probably add to list of people not to investigate
-                                WillNotInvestigate.append(Investigation['Target'])
-
-
+                for FriendlyNeighbourResult in FriendlyNeighbourResults:
+                    if (FriendlyNeighbourResult['Teller'] == FriendlyNeighbour):
+                        if FriendlyNeighbourResult['Revealed'] == 'Yes':
+                            WillNotTell.append(FriendlyNeighbourResult['Listener'])
+                        else:
+                            WillNotTell.append(FriendlyNeighbourResult['IntendedListener'])
+                    print("Friendly Neighbour, player " + str(FriendlyNeighbour) + " is not going to tell " +str(WillNotTell))
+                FriendlyNeighbourTeam = GetAttributeFromPlayer(FriendlyNeighbour,'Team')
+                if FriendlyNeighbourTeam != 0:
+                    WillNotTell += SearchPlayersFor('Team','==',FriendlyNeighbourTeam)
                 Target = TryToPickTownPlayer(FriendlyNeighbour,WillNotTell)
                 if Target != 0:
                     WriteAttributeToPlayer(FriendlyNeighbour, "FriendlyNeighbourShots", GetAttributeFromPlayer(FriendlyNeighbour, "FriendlyNeighbourShots")-1)
@@ -979,13 +1104,6 @@ def ReceiveCopActions():
     Cops = ReturnOneListWithCommonItemsFromTwoLists(SearchPlayersFor("Alive","==","'Yes'"),SearchPlayersFor("Cop","!=","'No'"))
     if Cops != []:
         for Cop in Cops:
-            WillNotInvestigate = []
-            #Build a list of people who have been the target of a revealed investigation by anyone or an unrevealed investigation by this cop
-            if len(InvestigationResults) > 0:
-                for Investigation in InvestigationResults:
-                    if (Investigation['Cop'] == Cop) or (Investigation['Revealed'] == 'Yes'):
-                        if GetYesOrNoFromProbability('No','Strong') == 'No': #Probably add to list of people not to investigate
-                            WillNotInvestigate.append(Investigation['Target'])
             CopActiveTonight = "No"
             #See if this Cop is to be active on this particular night
             CopValueFromPlayerList = GetAttributeFromPlayer(Cop,"Cop")
@@ -998,9 +1116,10 @@ def ReceiveCopActions():
             if GetAttributeFromPlayer(Cop, "CopShots") == 0:
                 CopActiveTonight = "No"
             if GetAttributeFromPlayer(Cop, "CopShots") > 0:
-                if GetYesOrNoFromProbability('Yes','Weak') == 'No':
+                if GetYesOrNoFromChangingProbability('Yes','Weak') == 'No':
                     CopActiveTonight = "No"
             if CopActiveTonight == "Yes":
+                WillNotInvestigate = GetPlayersWhoCopWillNotInvestigate(Cop)
                 if GetAttributeFromPlayer(Cop,'Alignment') == "Mafia":
                     Target = TryToPickTownPlayer(Cop,WillNotInvestigate)
                 else:
@@ -1010,6 +1129,32 @@ def ReceiveCopActions():
                     ThisNightsInvestigationActions.append({'Cop': Cop, 'Target' : Target})
                     print("On this night, Player " + str(Cop) + " is Investigating Player " + str(Target))
 
+
+def GetPlayersWhoCopWillNotInvestigate(Cop):
+    CopTeam = GetAttributeFromPlayer(Cop,"Team") != 0
+    if CopTeam != 0:
+        CopTeamMates = ReturnOneListWithCommonItemsFromThreeLists(SearchPlayersFor('Alive','==',"'Yes'"), SearchPlayersFor('PlayerID','!=',Cop), SearchPlayersFor('Team','==',CopTeam))
+    else:
+        CopTeamMates = []
+    WillNotInvestigate = []
+    #Build a list of people who have been the target of a revealed investigation by anyone or an unrevealed investigation by this cop
+    if len(InvestigationResults) > 0:
+        for Investigation in InvestigationResults:
+            if (Investigation['Cop'] == Cop) or (Investigation['Cop'] in CopTeamMates) or (Investigation['Revealed'] == 'Yes'):
+                if GetYesOrNoFromStableProbability('No','Strong') == 'No': #Probably add to list of people not to investigate
+                    WillNotInvestigate.append(Investigation['Target'])
+    #Exclude Friendly Neighbours
+    global FriendlyNeighbourResults
+    if len(FriendlyNeighbourResults) > 0:
+        for FriendlyNeighbourResult in FriendlyNeighbourResults:
+            if (FriendlyNeighbourResult['Listener'] == Cop) or (FriendlyNeighbourResult['Listener'] in CopTeamMates) or (FriendlyNeighbourResult['Revealed'] == 'Yes'):
+                if GetYesOrNoFromStableProbability('No','Strong') == 'No': #Probably add to list of people not to investigate
+                    WillNotInvestigate.append(FriendlyNeighbourResult['Teller'])
+    #Exclude Innocent Children
+    for InnocentChild in SearchPlayersFor('InnocentChild','==',"'Yes'"):
+        if GetYesOrNoFromStableProbability('No','Strong') == 'No':
+            WillNotInvestigate.append(InnocentChild)
+    return(WillNotInvestigate)
 
 InitiateGlobalVariables()
 SimulateSingleGame()

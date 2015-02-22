@@ -58,12 +58,12 @@ CopShots=5
 ***
 PlayerID = 13
 Alignment="Town"
-Inkbomb="Lynch"
 DeputyCop="Yes"
 ***
 PlayerID = 14
 Alignment="Mafia"
 Team=1
+Inkbomb="Lynch"
 TeamNightKill="Odd"
 ***
 PlayerID = 15
