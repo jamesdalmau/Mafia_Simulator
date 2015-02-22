@@ -112,12 +112,15 @@ def ReturnBlankPlayer(PlayerID):
     PlayerToReturn['LynchBomb'] = 'No'              # "Yes" or "No"
     PlayerToReturn['NightBomb'] = 'No'              # "Yes" or "No"
     PlayerToReturn['InnocentChild'] = 'No'          # "Yes" or "No"
+    PlayerToReturn['Godfather'] = 'No'              # "Yes" or "No"
     PlayerToReturn['Saulus'] = 'No'                 # "Yes" or "No" (If yes, Alignment should be "Mafia" and Team should be 0)
     PlayerToReturn['Judas'] = 'No'                  # "Yes" or "No" (If yes, Alignment should be "Town")
     PlayerToReturn['FriendlyNeighbour'] = 'No'      # "Yes", "Odd", "Even" or "No"
     PlayerToReturn['FriendlyNeighbourShots'] = -1      # if -1, unlimited. Otherwise, # of possible investigations
-    PlayerToReturn['Cop'] = 'No'                    # "Yes", "Odd", "Even" or "No" --- note, must add record of who the cop has investigated
+    PlayerToReturn['Cop'] = 'No'                    # "Yes", "Odd", "Even" or "No"
     PlayerToReturn['CopShots'] = -1             # if -1, unlimited. Otherwise, # of possible investigations
+    PlayerToReturn['Commuter'] = 'No'                    # "Yes", "Odd", "Even" or "No"
+    PlayerToReturn['CommuterShots'] = -1             # if -1, unlimited. Otherwise, # of possible commutings
     PlayerToReturn['Doctor'] = 'No'                 # "Yes", "Odd", "Even" or "No"
     PlayerToReturn['DoctorShots'] = -1          # if -1, unlimited. Otherwise, # of possible doctorings
     PlayerToReturn['RoleBlocker'] = 'No'            # "Yes", "Odd", "Even" or "No"
@@ -273,7 +276,7 @@ def KillPlayer(Killer,Victim,KillType):
 
 def PunishAndRewardVotersAfterLynch(Voters,LynchedPlayer):
     MinimumProbability = 1.3
-    MaximumProbability = 3
+    MaximumProbability = 2.5
     CriticalProportion = .6
     ProportionOfPlayers = len(SearchPlayersFor('Alive','==',"'Yes'")) / len(PlayerList)
     Probability = ((MaximumProbability - MinimumProbability) / (CriticalProportion - MaximumProbability) * (ProportionOfPlayers - MaximumProbability)) + MinimumProbability
@@ -411,6 +414,10 @@ def TryToPickMafiaPlayer(PlayerWhoIsChoosing,PlayersNotEligible):
     Hat = []
     PlayersTeam = GetAttributeFromPlayer(PlayerWhoIsChoosing,"Team")
     PlayersAlignment = GetAttributeFromPlayer(PlayerWhoIsChoosing,"Alignment")
+    if PlayersTeam != 0:
+        PlayersTeamMates = ReturnOneListWithCommonItemsFromThreeLists(SearchPlayersFor('Alive','==',"'Yes'"), SearchPlayersFor('PlayerID','!=',PlayerWhoIsChoosing), SearchPlayersFor('Team','==',PlayersTeam))
+    else:
+        PlayersTeamMates = []
     if PlayersTeam == 0:
         #If the player is not on a team, the pool of possible mafia is everyone who is still alive
         UnfilteredListOfPlayersForHat = ReturnOneListWithCommonItemsFromTwoLists(SearchPlayersFor("Alive","==","'Yes'"),SearchPlayersFor("PlayerID","!=",PlayerWhoIsChoosing))
@@ -429,23 +436,49 @@ def TryToPickMafiaPlayer(PlayerWhoIsChoosing,PlayersNotEligible):
     for PlayerInHat in PlayersToGoInHat: #Now go through each player who's going into the hat
         NumberOfNamesFromPlayerList = int(GetAttributeFromPlayer(PlayerInHat,'NumberOfNamesInHat'))
         if GetAttributeFromPlayer(PlayerInHat,'InnocentChild') == "Yes": #Exclude any innocent children
-            NumberOfTimesToGoInHat = 0
+            NumberOfNamesFromPlayerList = 0
         else:
+            # Decrease chances for person who is known to be town through Friendly Neighbour
+            if len(FriendlyNeighbourResults) > 0:
+                for FriendlyNeighbourResult in FriendlyNeighbourResults:
+                    if FriendlyNeighbourResult['Teller'] == PlayerInHat:
+                        if PlayerWhoIsChoosing == FriendlyNeighbourResult['Listener']:
+                            NumberOfNamesFromPlayerList = 0
+                        elif FriendlyNeighbourResult['Listener'] in PlayersTeamMates:
+                            NumberOfNamesFromPlayerList = 10
+                        elif FriendlyNeighbourResult['Revealed'] == 'Yes':
+                            NumberOfNamesFromPlayerList = 10
+            # Decrease chances for person who is known to be town through investigations (either as cops or as targets)
+            if len(InvestigationResults) > 0:
+                for Investigation in InvestigationResults:
+                    if Investigation['Target'] == PlayerInHat:
+                        if PlayerWhoIsChoosing == Investigation['Cop']:
+                            if Investigation['Alignment'] == 'Town':
+                                NumberOfNamesFromPlayerList = int(NumberOfNamesFromPlayerList / 3)
+                            elif Investigation['Alignment'] == 'Mafia':
+                                NumberOfNamesFromPlayerList * 3
+                        elif Investigation['Cop'] in PlayersTeamMates:
+                            if Investigation['Alignment'] == 'Town':
+                                NumberOfNamesFromPlayerList = int(NumberOfNamesFromPlayerList / 2)
+                            elif Investigation['Alignment'] == 'Mafia':
+                                NumberOfNamesFromPlayerList = int(NumberOfNamesFromPlayerList * 3)
+                        elif FriendlyNeighbourResult['Revealed'] == 'Yes':
+                            if Investigation['Alignment'] == 'Town':
+                                NumberOfNamesFromPlayerList = int(NumberOfNamesFromPlayerList / 2.5)
+                            elif Investigation['Alignment'] == 'Mafia':
+                                NumberOfNamesFromPlayerList = int(NumberOfNamesFromPlayerList * 2.5)
             if PlayersTeam != 0: # if the player is on a team
                 if PlayersTeam == int(GetAttributeFromPlayer(PlayerInHat,"Team")): #if the candidate is on the same team
                     if PlayersAlignment == "Town":
                         NumberOfNamesFromPlayerList = 0
                     elif PlayersAlignment == "Mafia":
-                        NumberOfTimesToGoInHat = NumberOfNamesFromPlayerList * 3
-                else:   #If chooser's team is not candidate's team
-                    NumberOfTimesToGoInHat = NumberOfNamesFromPlayerList
-            else:   # if chooser is not on a team
-                NumberOfTimesToGoInHat = NumberOfNamesFromPlayerList
-            if NumberOfTimesToGoInHat <= 70: #Exclude anyone who's unlikely to be mafia
-                NumberOfTimesToGoInHat = 0
+                        NumberOfNamesFromPlayerList = NumberOfNamesFromPlayerList * 3
+
+            if NumberOfNamesFromPlayerList <= 70: #Exclude anyone who's unlikely to be mafia
+                NumberOfNamesFromPlayerList = 0
         #Now populate the hat
         i = 0
-        while i < NumberOfTimesToGoInHat:
+        while i < NumberOfNamesFromPlayerList:
             Hat.append(PlayerInHat)
             i +=1
     if Hat != []:
@@ -833,7 +866,11 @@ def ProcessCopActions():
     for Investigation in ThisNightsInvestigationActions:
         ActualTarget = FindBusDrivingPairs(Investigation['Target'])
         if len(ActualTarget) == 1: #Investigation fails if busdriving means there's multiple targets
-            InvestigationResults.append({'Cop':Investigation['Cop'],'Target':Investigation['Target'],'Alignment':GetAttributeFromPlayer(ActualTarget[0],'Alignment'),'Revealed':'No'})
+            if GetAttributeFromPlayer(ActualTarget[0],'Godfather') != 'Yes':
+                RevealedAlignment = GetAttributeFromPlayer(ActualTarget[0],'Alignment')
+            else:
+                RevealedAlignment = 'Town'
+            InvestigationResults.append({'Cop':Investigation['Cop'],'Target':Investigation['Target'],'Alignment':RevealedAlignment,'Revealed':'No'})
 
 
 def ProcessFriendlyNeighbourActions():
@@ -1086,10 +1123,10 @@ def ReceiveFriendlyNeighbourActions():
                             WillNotTell.append(FriendlyNeighbourResult['Listener'])
                         else:
                             WillNotTell.append(FriendlyNeighbourResult['IntendedListener'])
-                    print("Friendly Neighbour, player " + str(FriendlyNeighbour) + " is not going to tell " +str(WillNotTell))
                 FriendlyNeighbourTeam = GetAttributeFromPlayer(FriendlyNeighbour,'Team')
                 if FriendlyNeighbourTeam != 0:
                     WillNotTell += SearchPlayersFor('Team','==',FriendlyNeighbourTeam)
+                    print("Friendly Neighbour, player " + str(FriendlyNeighbour) + " is not going to tell " +str(WillNotTell))
                 Target = TryToPickTownPlayer(FriendlyNeighbour,WillNotTell)
                 if Target != 0:
                     WriteAttributeToPlayer(FriendlyNeighbour, "FriendlyNeighbourShots", GetAttributeFromPlayer(FriendlyNeighbour, "FriendlyNeighbourShots")-1)
