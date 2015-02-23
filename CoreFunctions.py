@@ -117,6 +117,8 @@ def ReturnBlankPlayer(PlayerID):
     PlayerToReturn['Judas'] = 'No'                  # "Yes" or "No" (If yes, Alignment should be "Town")
     PlayerToReturn['FriendlyNeighbour'] = 'No'      # "Yes", "Odd", "Even" or "No"
     PlayerToReturn['FriendlyNeighbourShots'] = -1      # if -1, unlimited. Otherwise, # of possible investigations
+    PlayerToReturn['ParanoidGunOwner'] = 'No'              # "Yes" or "No"
+    PlayerToReturn['ParanoidGunOwnerShots'] = -1              # if -1, unlimited. Otherwise, # of times the PGO can fire
     PlayerToReturn['Cop'] = 'No'                    # "Yes", "Odd", "Even" or "No"
     PlayerToReturn['CopShots'] = -1             # if -1, unlimited. Otherwise, # of possible investigations
     PlayerToReturn['Commuter'] = 'No'                    # "Yes", "Odd", "Even" or "No"
@@ -803,7 +805,7 @@ def SimulateSingleGame():
 
 
 def NightRoutine():
-    global PlayersBeingRoleBlocked
+    global ThisNightsRoleBlockings
     global BusDrivings
     global ThisNightsInvestigationActions
     global InvestigationResults
@@ -814,7 +816,9 @@ def NightRoutine():
     global ActualNightKills
     global NightsOnWhichThereAreNoKills
     global ThisTurnsFriendlyNeighbourActions
-    PlayersBeingRoleBlocked =[]
+    global ThisNightsPGOKills
+    ThisNightsRoleBlockings =[]
+    ThisNightsPGOKills =[]
     PlayersProtectedByDoctors = []
     ThisNightsInvestigationActions = []
     ThisTurnsFriendlyNeighbourActions = []
@@ -846,7 +850,7 @@ def ProcessDoctorActions():
     for Target in PlayersTargetedByDoctors:
         ProtectionsResultingFromBusDriving = FindBusDrivingPairs(Target)
         for Protection in ProtectionsResultingFromBusDriving:
-            PlayersProtectedByDoctors.append(Target)
+            PlayersProtectedByDoctors.append(Protection)
 
 
 def ProcessVigilanteKillActions():
@@ -916,9 +920,9 @@ def FindBusDrivingPairs(PlayerID):
 
 
 def ReceiveRoleBlockingActions():
-    global PlayersBeingRoleBlocked
+    global ThisNightsRoleBlockings
     global Night
-    PlayersBeingRoleBlocked = []
+    ThisNightsRoleBlockings = []
     LivingRoleBlockers = ReturnOneListWithCommonItemsFromTwoLists(SearchPlayersFor('Alive','==',"'Yes'"),SearchPlayersFor("RoleBlocker","!=","'No'"))
     if LivingRoleBlockers != []: #If there are any roleblockers
         for RoleBlocker in LivingRoleBlockers:
@@ -939,11 +943,20 @@ def ReceiveRoleBlockingActions():
                     PlayerToBeRoleBlocked = TryToPickTownPlayer(RoleBlocker,[])
                 else:
                     PlayerToBeRoleBlocked = TryToPickMafiaPlayer(RoleBlocker,[])
-                if PlayersBeingRoleBlocked != 0:
-                    WriteAttributeToPlayer(RoleBlocker, "RoleBlockerShots", GetAttributeFromPlayer(RoleBlocker, "RoleBlockerShots")-1)
-                    PlayersBeingRoleBlocked.append(PlayerToBeRoleBlocked)
-                    print("On this night, Player " + str(RoleBlocker) + " is roleblocking " + str(PlayerToBeRoleBlocked))
+                if ThisNightsRoleBlockings != 0:
+                    if GetAttributeFromPlayer(PlayerToBeRoleBlocked,'ParanoidGunOwner') == 'Yes' and GetAttributeFromPlayer(PlayerToBeRoleBlocked,'ParanoidGunOwnerShots') != 0:
+                        print("Player " + str(RoleBlocker) + " tried to roleblock a PGO and is now getting killed.")
+                        PGOReaction(PlayerToBeRoleBlocked,RoleBlocker)
+                    else:
+                        WriteAttributeToPlayer(RoleBlocker, "RoleBlockerShots", GetAttributeFromPlayer(RoleBlocker, "RoleBlockerShots")-1)
+                        ThisNightsRoleBlockings.append({'RoleBlocker': RoleBlocker, 'Target' : PlayerToBeRoleBlocked})
+                        print("Player " + str(RoleBlocker) + " is roleblocking " + str(PlayerToBeRoleBlocked))
 
+
+def PGOReaction(Killer,Victim):
+    global ThisNightsPGOKills
+    WriteAttributeToPlayer(Killer, "ParanoidGunOwnerShots", GetAttributeFromPlayer(Killer, "ParanoidGunOwnerShots")-1)
+    ThisNightsPGOKills.append({'Killer': Killer,'Victim': Victim})
 
 def ReceiveBusDrivingActions():
     global BusDrivings
@@ -958,8 +971,9 @@ def ReceiveBusDrivingActions():
                 BusDriverActiveTonight = "Yes"
             elif BusDriverValueFromPlayerlist == IsNumberOddOrEven(Night):
                 BusDriverActiveTonight = "Yes"
-            if BusDriver in PlayersBeingRoleBlocked: #BusDriver is inactive if roleblocked
-                BusDriverActiveTonight = "No"
+            for RoleBlocking in ThisNightsRoleBlockings:
+                if BusDriver == RoleBlocking['Target']: #BusDriver is inactive if roleblocked
+                    BusDriverActiveTonight = "No"
             if BusDriverActiveTonight == "Yes":
                 BusDrivenPlayer1 = TryToPickMafiaPlayer(BusDriver,[])
                 ExcludedPlayers = []
@@ -973,8 +987,15 @@ def ReceiveBusDrivingActions():
                         InsertSlot1 = BusDrivenPlayer1
                         InsertSlot2 = BusDrivenPlayer2
                     if [InsertSlot1,InsertSlot2] not in BusDrivings:
-                        print("On this night, Player " + str(BusDriver) + " is busdriving Player " + str(BusDrivenPlayer1) + " and Player " + str(BusDrivenPlayer2))
-                        BusDrivings.append([BusDrivenPlayer1,BusDrivenPlayer2])
+                        if GetAttributeFromPlayer(BusDrivenPlayer1,'ParanoidGunOwner') == 'Yes' and GetAttributeFromPlayer(BusDrivenPlayer1,'ParanoidGunOwnerShots') != 0:
+                            print("Player " + str(BusDriver) + " tried to busdrive a PGO and is now getting killed.")
+                            PGOReaction(BusDrivenPlayer1,BusDriver)
+                        elif GetAttributeFromPlayer(BusDrivenPlayer2,'ParanoidGunOwner') == 'Yes' and GetAttributeFromPlayer(BusDrivenPlayer2,'ParanoidGunOwnerShots') != 0:
+                            print("Player " + str(BusDriver) + " tried to busdrive a PGO and is now getting killed.")
+                            PGOReaction(BusDrivenPlayer2,BusDriver)
+                        else:
+                            print("On this night, Player " + str(BusDriver) + " is busdriving Player " + str(BusDrivenPlayer1) + " and Player " + str(BusDrivenPlayer2))
+                            BusDrivings.append([BusDrivenPlayer1,BusDrivenPlayer2])
 
 
 def ReceiveTeamNightKillActions():
@@ -993,8 +1014,9 @@ def ReceiveTeamNightKillActions():
                 TeamKillerActiveTonight = "Yes"
             elif TeamNightKillValueFromPlayerList == IsNumberOddOrEven(Night):
                 TeamKillerActiveTonight = "Yes"
-            if ChosenTeamKiller in PlayersBeingRoleBlocked: #Teamkiller is inactive if roleblocked
-                TeamKillerActiveTonight = "No"
+            for RoleBlocking in ThisNightsRoleBlockings:
+                if ChosenTeamKiller == RoleBlocking['Target']: #Teamkiller is inactive if roleblocked
+                    TeamKillerActiveTonight = "No"
             if TeamKillerActiveTonight == "Yes":
                 if GetAttributeFromPlayer(ChosenTeamKiller,'Alignment') == "Mafia":
                     Target = TryToPickTownPlayer(ChosenTeamKiller,[])
@@ -1028,8 +1050,9 @@ def ReceiveVigilanteKillActions():
                 VigilanteActiveTonight = "Yes"
             elif VigilanteValueFromPlayerList == IsNumberOddOrEven(Night):
                 VigilanteActiveTonight = "Yes"
-            if Vigilante in PlayersBeingRoleBlocked: #BusDriver is inactive if roleblocked
-                VigilanteActiveTonight = "No"
+            for RoleBlocking in ThisNightsRoleBlockings:
+                if Vigilante == RoleBlocking['Target']: #Vigilante is inactive if roleblocked
+                    VigilanteActiveTonight = "No"
             if GetAttributeFromPlayer(Vigilante, "VigilanteShots") == 0:
                 VigilanteActiveTonight = "No"
             if GetAttributeFromPlayer(Vigilante, "VigilanteShots") > 0:
@@ -1072,8 +1095,9 @@ def ReceiveDoctorActions():
                 DoctorActiveTonight = "Yes"
             elif DoctorValueFromPlayerList == IsNumberOddOrEven(Night):
                 DoctorActiveTonight = "Yes"
-            if Doctor in PlayersBeingRoleBlocked: #Doctor is inactive if roleblocked
-                DoctorActiveTonight = "No"
+            for RoleBlocking in ThisNightsRoleBlockings:
+                if Doctor == RoleBlocking['Target']: #Doctor is inactive if roleblocked
+                    DoctorActiveTonight = "No"
             if GetAttributeFromPlayer(Doctor, "DoctorShots") == 0:
                 DoctorActiveTonight = "No"
             if GetAttributeFromPlayer(Doctor, "DoctorShots") > 0:
@@ -1085,10 +1109,18 @@ def ReceiveDoctorActions():
                 else:
                     PlayerToBeDoctored = TryToPickTownPlayer(Player,[])
                 if PlayerToBeDoctored != 0:
-                    WriteAttributeToPlayer(Doctor, "DoctorShots", GetAttributeFromPlayer(Doctor, "DoctorShots")-1)
-                    ThisNightsDoctorActions.append({'Doctor': Doctor, 'Target' : PlayerToBeDoctored})
-                    PlayersTargetedByDoctors.append(PlayerToBeDoctored)
-                    print("On this night, Player " + str(Doctor) + " is Doctoring " + str(PlayerToBeDoctored))
+                    PGOKilled = 'No'
+                    ActualTargets = FindBusDrivingPairs(PlayerToBeDoctored)
+                    for ActualTarget in ActualTargets:
+                        if GetAttributeFromPlayer(ActualTarget,'ParanoidGunOwner') == 'Yes' and GetAttributeFromPlayer(Target,'ParanoidGunOwnerShots') != 0:
+                            print("Player " + str(Cop) + " tried to doctor a PGO and is now getting killed.")
+                            PGOReaction(ActualTarget,Doctor)
+                            PGOKilled = "Yes"
+                    if PGOKilled == 'No':
+                        WriteAttributeToPlayer(Doctor, "DoctorShots", GetAttributeFromPlayer(Doctor, "DoctorShots")-1)
+                        ThisNightsDoctorActions.append({'Doctor': Doctor, 'Target' : PlayerToBeDoctored})
+                        PlayersTargetedByDoctors.append(PlayerToBeDoctored)
+                        print("On this night, Player " + str(Doctor) + " is Doctoring " + str(PlayerToBeDoctored))
 
 
 def ReceiveFriendlyNeighbourActions():
@@ -1107,8 +1139,9 @@ def ReceiveFriendlyNeighbourActions():
                 FriendlyNeighbourActiveTonight = "Yes"
             elif FriendlyNeighbourValueFromPlayerList == IsNumberOddOrEven(Night):
                 FriendlyNeighbourActiveTonight = "Yes"
-            if FriendlyNeighbour in PlayersBeingRoleBlocked: #FriendlyNeighbour is inactive if roleblocked
-                FriendlyNeighbourActiveTonight = "No"
+            for RoleBlocking in ThisNightsRoleBlockings:
+                if FriendlyNeighbour == RoleBlocking['Target']: #FriendlyNeighbour is inactive if roleblocked
+                    FriendlyNeighbourActiveTonight = "No"
             if GetAttributeFromPlayer(FriendlyNeighbour, "FriendlyNeighbourShots") == 0:
                 FriendlyNeighbourActiveTonight = "No"
             if GetAttributeFromPlayer(FriendlyNeighbour, "FriendlyNeighbourShots") > 0:
@@ -1148,8 +1181,9 @@ def ReceiveCopActions():
                 CopActiveTonight = "Yes"
             elif CopValueFromPlayerList == IsNumberOddOrEven(Night):
                 CopActiveTonight = "Yes"
-            if Cop in PlayersBeingRoleBlocked: #Cop is inactive if roleblocked
-                CopActiveTonight = "No"
+            for RoleBlocking in ThisNightsRoleBlockings:
+                if Cop == RoleBlocking['Target']: #Cop is inactive if roleblocked
+                    CopActiveTonight = "No"
             if GetAttributeFromPlayer(Cop, "CopShots") == 0:
                 CopActiveTonight = "No"
             if GetAttributeFromPlayer(Cop, "CopShots") > 0:
@@ -1162,9 +1196,17 @@ def ReceiveCopActions():
                 else:
                     Target = TryToPickMafiaPlayer(Cop,WillNotInvestigate)
                 if Target != 0:
-                    WriteAttributeToPlayer(Cop, "CopShots", GetAttributeFromPlayer(Cop, "CopShots")-1)
-                    ThisNightsInvestigationActions.append({'Cop': Cop, 'Target' : Target})
-                    print("On this night, Player " + str(Cop) + " is Investigating Player " + str(Target))
+                    PGOKilled = 'No'
+                    ActualTargets = FindBusDrivingPairs(Target)
+                    for ActualTarget in ActualTargets:
+                        if GetAttributeFromPlayer(ActualTarget,'ParanoidGunOwner') == 'Yes' and GetAttributeFromPlayer(Target,'ParanoidGunOwnerShots') != 0:
+                            print("Player " + str(Cop) + " tried to investigate a PGO and is now getting killed.")
+                            PGOReaction(ActualTarget,Cop)
+                            PGOKilled = "Yes"
+                    if PGOKilled == 'No':
+                        WriteAttributeToPlayer(Cop, "CopShots", GetAttributeFromPlayer(Cop, "CopShots")-1)
+                        ThisNightsInvestigationActions.append({'Cop': Cop, 'Target' : Target})
+                        print("On this night, Player " + str(Cop) + " is Investigating Player " + str(Target))
 
 
 def GetPlayersWhoCopWillNotInvestigate(Cop):
