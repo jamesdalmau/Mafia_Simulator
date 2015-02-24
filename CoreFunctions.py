@@ -277,9 +277,9 @@ def KillPlayer(Killer,Victim,KillType):
 
 
 def PunishAndRewardVotersAfterLynch(Voters,LynchedPlayer):
-    MinimumProbability = 1.3
-    MaximumProbability = 2.5
-    CriticalProportion = .6
+    MinimumProbability = 1
+    MaximumProbability = 5
+    CriticalProportion = .8
     ProportionOfPlayers = len(SearchPlayersFor('Alive','==',"'Yes'")) / len(PlayerList)
     Probability = ((MaximumProbability - MinimumProbability) / (CriticalProportion - MaximumProbability) * (ProportionOfPlayers - MaximumProbability)) + MinimumProbability
     Probability = max(Probability, MinimumProbability)
@@ -287,34 +287,34 @@ def PunishAndRewardVotersAfterLynch(Voters,LynchedPlayer):
     #Punish and reward the voters
     for Voter in Voters:
         if AlignmentOfDeadPlayer == 'Mafia':
-            ChangeToNumberOfNamesInHat = math.ceil(Probability * randint(4,8))
+            ChangeToNumberOfNamesInHat = math.ceil(Probability * randint(10,15))
             NewNumber=GetAttributeFromPlayer(Voter,'NumberOfNamesInHat')-ChangeToNumberOfNamesInHat
 #            print("Player " + str(Voter) + " voted to lynch a mafia.")
         elif AlignmentOfDeadPlayer == 'Town':
-            ChangeToNumberOfNamesInHat = math.ceil(Probability * randint(4,8))
+            ChangeToNumberOfNamesInHat = math.ceil(Probability * randint(10,15))
             NewNumber=GetAttributeFromPlayer(Voter,'NumberOfNamesInHat')+ChangeToNumberOfNamesInHat
  #           print("Player " + str(Voter) + " voted to lynch a town.")
         if NewNumber<0:
             NewNumber=0
         WriteAttributeToPlayer(Voter,'NumberOfNamesInHat',NewNumber)
-#        print("Player " + str(Voter) + "'s odds are now " + str(NewNumber))
+        print("Player " + str(Voter) + "'s odds are now " + str(NewNumber))
     #Punish and reward the non-voters
     NonVoters = SearchPlayersFor('Alive','==','"Yes"')
     for NonVoter in NonVoters:
         if NonVoter != LynchedPlayer:
             if NonVoter not in Voters:
                 if AlignmentOfDeadPlayer == 'Mafia':
-                    ChangeToNumberOfNamesInHat = math.ceil(Probability * randint(3,7))
+                    ChangeToNumberOfNamesInHat = math.ceil(Probability * randint(1,5))
                     NewNumber = GetAttributeFromPlayer(NonVoter,'NumberOfNamesInHat')+ChangeToNumberOfNamesInHat
 #                    print("Player " + str(NonVoter) + " didn't vote to lynch a mafia.")
                 elif AlignmentOfDeadPlayer == 'Town':
-                    ChangeToNumberOfNamesInHat = math.ceil(Probability * randint(3,7))
+                    ChangeToNumberOfNamesInHat = math.ceil(Probability * randint(1,5))
                     NewNumber = GetAttributeFromPlayer(NonVoter,'NumberOfNamesInHat')-ChangeToNumberOfNamesInHat
 #                    print("Player " + str(NonVoter) + " didn't vote to lynch a town.")
                 if NewNumber<0:
                     NewNumber=0
                 WriteAttributeToPlayer(NonVoter,'NumberOfNamesInHat',NewNumber)
-#                print("Player " + str(NonVoter) + "'s odds are now " + str(GetAttributeFromPlayer(NonVoter,'NumberOfNamesInHat')))
+                print("Player " + str(NonVoter) + "'s odds are now " + str(GetAttributeFromPlayer(NonVoter,'NumberOfNamesInHat')))
 
 
 def PickNameFromHatForLynch(PlayersToGoInHat):
@@ -749,7 +749,7 @@ def ConsiderRevealingInvestigations():
     for Result in InvestigationResults:
         WillReveal = 'No'
         if Result['Revealed'] == 'No':
-            if GetAttributeFromPlayer(Result['Cop'],'Alive') == "Yes":
+            if GetAttributeFromPlayer(Result['Cop'],'Alive') == "Yes" and GetAttributeFromPlayer(Result['Cop'],'Alignment') == "Town":
                 if Result['Alignment'] == 'Mafia' and GetAttributeFromPlayer(Result['Cop'],'Alignment') == "Town":
                     WillReveal = GetYesOrNoFromChangingProbability('Yes','Strong')
                 elif Result['Alignment'] != 'Mafia' and GetAttributeFromPlayer(Result['Cop'],'Alignment') == "Mafia":
@@ -757,7 +757,6 @@ def ConsiderRevealingInvestigations():
                 else:
                     WillReveal = GetYesOrNoFromChangingProbability('No','Weak')
                 if WillReveal == 'Yes':
-                    #Assuming that only town can be cops
                     Result['Revealed'] = "Yes"
                     WriteAttributeToPlayer(Result['Cop'],'NumberOfNamesInHat',10)
                     if Result['Alignment'] == "Town":
@@ -802,9 +801,11 @@ def SimulateSingleGame():
             LivingPlayers = SearchPlayersFor('Alive','==',"'Yes'")
             print("The remaining living players at the end of Night " + str(Night) + " are " + str(LivingPlayers))
     LivingPlayers = SearchPlayersFor('Alive','==',"'Yes'")
+    EndingMoment = str(TimeCounter) + "(" + str(DayOrNightWhenGameEnded) + ")"
     print()
     print("Winners = " + WinningTeam)
     print("Ending moment = " + str(TimeCounter) + "(" + str(DayOrNightWhenGameEnded) + ")")
+    return(EndingMoment,WinningTeam)
 
 
 def NightRoutine():
@@ -1311,5 +1312,19 @@ def GetPlayersWhoCopWillNotInvestigate(Cop):
             WillNotInvestigate.append(InnocentChild)
     return(WillNotInvestigate)
 
-InitiateGlobalVariables()
-SimulateSingleGame()
+ResultsFile = open('results.txt','w')
+i=0
+TownVictories = 0
+MafiaVictories = 0
+while i<100:
+    InitiateGlobalVariables()
+    EndingTime, EndingTeam = SimulateSingleGame()
+    ResultsFile .write(EndingTime + ", " + EndingTeam + "\n")
+    if EndingTeam == "Town":
+        TownVictories += 1
+    else:
+        MafiaVictories +=1
+    i+=1
+
+print("Town Victories = " + str(TownVictories))
+print("Mafia Victories = " + str(MafiaVictories))
