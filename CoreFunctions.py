@@ -73,24 +73,24 @@ def TestForDeputies(DyingPlayer):
 def TestForDeputy(DyingPlayer,RoleType):
     FoundDeputy = 0
     if GetAttributeFromPlayer(DyingPlayer,RoleType) != 'No': #Test for deputy
-        print("Dying player was a " + RoleType + ". Looking for deputies.")
+        #print("Dying player was a " + RoleType + ". Looking for deputies.")
         PossibleDeputies = []
         LivingDeputiesOfSameAlignmentAndTeam = []
         LivingDeputiesOfSameAlignment = ReturnOneListWithCommonItemsFromThreeLists(SearchPlayersFor('Alignment','==',"'" + GetAttributeFromPlayer(DyingPlayer,'Alignment') + "'"),SearchPlayersFor('Alive','==',"'Yes'"),SearchPlayersFor('Deputy' + RoleType,'==',"'Yes'"))
         if len(LivingDeputiesOfSameAlignment) != 0: # If there are any living deputies of same alignment
-            print("There are some deputy "+ RoleType + "s of that alignment.")
+            #print("There are some deputy "+ RoleType + "s of that alignment.")
             if GetAttributeFromPlayer(DyingPlayer,'Team') != 0: # If the dying player has a team, and there are deputies alive on that team, narrow the list to those on that team
-                print("The player had a team, so we're looking for deputies on that team.")
+                #print("The player had a team, so we're looking for deputies on that team.")
                 LivingDeputiesOfSameAlignmentAndTeam = ReturnOneListWithCommonItemsFromTwoLists(LivingDeputiesOfSameAlignment,SearchPlayersFor('Team','==',GetAttributeFromPlayer(DyingPlayer,'Team')))
                 if len(LivingDeputiesOfSameAlignmentAndTeam) == 0:
-                    print("There were no deputies on that team, so we're looking for any deputies.")
+                    #print("There were no deputies on that team, so we're looking for any deputies.")
                     LivingDeputiesOfSameAlignmentAndTeam = LivingDeputiesOfSameAlignment
             else: # If the dying player has no team, any deputy of that alignment will do
-                print("The player had no team, so we're looking for any deputies.")
+                #print("The player had no team, so we're looking for any deputies.")
                 LivingDeputiesOfSameAlignmentAndTeam = LivingDeputiesOfSameAlignment
         if len(LivingDeputiesOfSameAlignmentAndTeam) != 0:
             FoundDeputy = PickRandomItemFromList(LivingDeputiesOfSameAlignmentAndTeam)
-            print("We found a living Deputy " + RoleType + "! It was player " + str (FoundDeputy))
+            #print("We found a living Deputy " + RoleType + "! It was player " + str (FoundDeputy))
     if FoundDeputy != 0:
         WriteAttributeToPlayer(FoundDeputy,RoleType,GetAttributeFromPlayer(DyingPlayer,RoleType))
         WriteAttributeToPlayer(FoundDeputy,RoleType + 'Shots',GetAttributeFromPlayer(DyingPlayer,RoleType + 'Shots'))
@@ -156,9 +156,12 @@ def CreatePlayerList(): # Reads players.txt and makes the main list for use in a
         else:   # If the line is "***" it's time to add the Player to the List
             PlayerToAdd['Alive']='Yes'    # Default 'Alive' to 'Yes', can change to 'No' during game
             if PlayerToAdd['InnocentChild'] == "Yes":
-                PlayerToAdd['NumberOfNamesInHat'] = 0
+                PlayerToAdd['NumberOfNamesInHat'] = 1
             else:
-                PlayerToAdd['NumberOfNamesInHat'] = 100
+                if PlayerToAdd['Alignment'] == 'Mafia':
+                    PlayerToAdd['NumberOfNamesInHat'] = 500
+                elif PlayerToAdd['Alignment'] == 'Town':
+                    PlayerToAdd['NumberOfNamesInHat'] = 390
             GlobalPlayerList.append(PlayerToAdd.copy())  # Add PlayerToAdd to the global PlayerList list
             PlayerID += 1
             PlayerToAdd = ReturnBlankPlayer(PlayerID) # Prepare the next player
@@ -199,7 +202,7 @@ def TryToLynch():
     LivingMafiaRevealedToday = ReturnOneListWithCommonItemsFromTwoLists(MafiaRevealedToday,SearchPlayersFor('Alive','==',"'Yes'"))
     while len(LivingMafiaRevealedToday) > 0 and PlayerWhoWillBeLynched == 0:
         CandidatePickedFromHat = PickNameFromHatForLynch(LivingMafiaRevealedToday)
-        print("Seeing if we can lynch Revealed Mafia, Player " + str(CandidatePickedFromHat))
+        #print("Seeing if we can lynch Revealed Mafia, Player " + str(CandidatePickedFromHat))
         GetsEnoughVotes, ActualVoters = WillGetEnoughLynchVotes(CandidatePickedFromHat)
         if GetsEnoughVotes == "Yes":    # See if this candidate gets enough votes
             PlayerWhoWillBeLynched = CandidatePickedFromHat
@@ -229,13 +232,13 @@ def KillPlayer(Killer,Victim,KillType):
     if KillType == "Lynch":
         if GetAttributeFromPlayer(Victim,'LynchResistant') != 0:  #If player is lynch resistant
             WriteAttributeToPlayer(Victim,'LynchResistant',int(GetAttributeFromPlayer(Victim,'LynchResistant'))-1)
-            print("Player was lynch-resistant.")
+            #print("Player was lynch-resistant.")
         else:
             ResistancesOvercome = "Yes"
     elif KillType == "Night":
         if GetAttributeFromPlayer(Victim,'NightKillResistant') != 0:  #If player is NK resistant
             WriteAttributeToPlayer(Victim,'NightKillResistant',int(GetAttributeFromPlayer(Victim,'NightKillResistant'))-1)
-            print("Player was night-kill-resistant.")
+            #print("Player was night-kill-resistant.")
         else:
             ResistancesOvercome = "Yes"
     if KillType == "LynchBomb" or KillType == "NightBomb":
@@ -245,18 +248,18 @@ def KillPlayer(Killer,Victim,KillType):
         if GetAttributeFromPlayer(Victim,'Judas') == 'Yes' and GetAttributeFromPlayer(Victim,'Alignment') == 'Town': #If Player is a Judas
             WriteAttributeToPlayer(Victim,'Alignment','Mafia')
             KillBecomesConvert = "Yes"
-            print("Player was a Judas! Player is now Mafia.")
+            #print("Player was a Judas! Player is now Mafia.")
         elif GetAttributeFromPlayer(Victim,'Saulus') == 'Yes' and GetAttributeFromPlayer(Victim,'Alignment') == 'Mafia': #If Player is a Saulus
             WriteAttributeToPlayer(Victim,'Alignment','Town')
             KillBecomesConvert = "Yes"
-            print("Player was a Saulus! Player is now Town.")
+            #print("Player was a Saulus! Player is now Town.")
         if KillBecomesConvert == "No": #Proceed if kill wasn't converted
             WriteAttributeToPlayer(Victim,'Alive','No')   #kill player
             TestForDeputies(Victim)
             BelovedPrincess = GetAttributeFromPlayer(Victim,'BelovedPrincess')
             Inkbomb = GetAttributeFromPlayer(Victim,'Inkbomb')
             if BelovedPrincess == 'Either' or BelovedPrincess == KillType: # If player is a Beloved Princess
-                print("Player " + str(Victim) + " was a Beloved Princess! Day " + str(Day + 1) + " will be skipped.")
+                #print("Player " + str(Victim) + " was a Beloved Princess! Day " + str(Day + 1) + " will be skipped.")
                 global DaysThatDoNotHappen
                 DaysThatDoNotHappen.append(Day+1)
             if Inkbomb == 'Either' or Inkbomb == KillType: # If player is an Inkbomb
@@ -264,22 +267,22 @@ def KillPlayer(Killer,Victim,KillType):
                     NightOnWhichThereWillBeNoKills = Night
                 elif KillType == "Night":
                     NightOnWhichThereWillBeNoKills = Night+1
-                print("Player " + str(Victim) + " was a Inkbomb! There can be no night kills on " + str(NightOnWhichThereWillBeNoKills) + ".")
+                #print("Player " + str(Victim) + " was a Inkbomb! There can be no night kills on " + str(NightOnWhichThereWillBeNoKills) + ".")
                 global NightsOnWhichThereAreNoKills
                 NightsOnWhichThereAreNoKills.append(NightOnWhichThereWillBeNoKills)
             if KillType == 'Lynch' and GetAttributeFromPlayer(Victim,'LynchBomb') == 'Yes':
                 RandomVoterKilled = PickRandomItemFromList(Killer)
-                print("Player " + str(Victim) + " was a LynchBomb. Random voter, Player " + str(RandomVoterKilled) + ", is targeted by the bomb.")
+                #print("Player " + str(Victim) + " was a LynchBomb. Random voter, Player " + str(RandomVoterKilled) + ", is targeted by the bomb.")
                 KillPlayer(Victim,RandomVoterKilled,'LynchBomb')   #Kill random voter
             elif KillType == 'Night' and GetAttributeFromPlayer(Victim,'NightBomb') == 'Yes':
-                print("Player " + str(Victim) + " was a NightBomb. Their killer, Player " + str(Killer) + ", is targeted by the bomb.")
+                #print("Player " + str(Victim) + " was a NightBomb. Their killer, Player " + str(Killer) + ", is targeted by the bomb.")
                 KillPlayer(Victim,Killer,'NightBomb')   #Kill killer
 
 
 def PunishAndRewardVotersAfterLynch(Voters,LynchedPlayer):
     MinimumProbability = 1
-    MaximumProbability = 5
-    CriticalProportion = .8
+    MaximumProbability = 3
+    CriticalProportion = .6
     ProportionOfPlayers = len(SearchPlayersFor('Alive','==',"'Yes'")) / len(PlayerList)
     Probability = ((MaximumProbability - MinimumProbability) / (CriticalProportion - MaximumProbability) * (ProportionOfPlayers - MaximumProbability)) + MinimumProbability
     Probability = max(Probability, MinimumProbability)
@@ -287,34 +290,44 @@ def PunishAndRewardVotersAfterLynch(Voters,LynchedPlayer):
     #Punish and reward the voters
     for Voter in Voters:
         if AlignmentOfDeadPlayer == 'Mafia':
-            ChangeToNumberOfNamesInHat = math.ceil(Probability * randint(10,15))
+            ChangeToNumberOfNamesInHat = math.ceil(Probability * randint(50,70))
             NewNumber=GetAttributeFromPlayer(Voter,'NumberOfNamesInHat')-ChangeToNumberOfNamesInHat
-#            print("Player " + str(Voter) + " voted to lynch a mafia.")
+#            #print("Player " + str(Voter) + " voted to lynch a mafia.")
         elif AlignmentOfDeadPlayer == 'Town':
-            ChangeToNumberOfNamesInHat = math.ceil(Probability * randint(10,15))
+            ChangeToNumberOfNamesInHat = math.ceil(Probability * randint(50,70))
             NewNumber=GetAttributeFromPlayer(Voter,'NumberOfNamesInHat')+ChangeToNumberOfNamesInHat
- #           print("Player " + str(Voter) + " voted to lynch a town.")
-        if NewNumber<0:
-            NewNumber=0
+ #           #print("Player " + str(Voter) + " voted to lynch a town.")
+        VoterAlignment = GetAttributeFromPlayer(Voter,'Alignment')
+        if VoterAlignment == 'Town':
+            NewNumber = int(NewNumber * .77)
+        elif VoterAlignment == 'Mafia':
+            NewNumber = int(NewNumber * (1.3 + (Day * .07)))
+        if NewNumber<1:
+            NewNumber=1
         WriteAttributeToPlayer(Voter,'NumberOfNamesInHat',NewNumber)
-        print("Player " + str(Voter) + "'s odds are now " + str(NewNumber))
+        #print("Player " + str(Voter) + "'s odds are now " + str(NewNumber))
     #Punish and reward the non-voters
     NonVoters = SearchPlayersFor('Alive','==','"Yes"')
     for NonVoter in NonVoters:
         if NonVoter != LynchedPlayer:
             if NonVoter not in Voters:
                 if AlignmentOfDeadPlayer == 'Mafia':
-                    ChangeToNumberOfNamesInHat = math.ceil(Probability * randint(1,5))
+                    ChangeToNumberOfNamesInHat = math.ceil(Probability * randint(5,20))
                     NewNumber = GetAttributeFromPlayer(NonVoter,'NumberOfNamesInHat')+ChangeToNumberOfNamesInHat
-#                    print("Player " + str(NonVoter) + " didn't vote to lynch a mafia.")
+#                    #print("Player " + str(NonVoter) + " didn't vote to lynch a mafia.")
                 elif AlignmentOfDeadPlayer == 'Town':
-                    ChangeToNumberOfNamesInHat = math.ceil(Probability * randint(1,5))
+                    ChangeToNumberOfNamesInHat = math.ceil(Probability * randint(5,20))
                     NewNumber = GetAttributeFromPlayer(NonVoter,'NumberOfNamesInHat')-ChangeToNumberOfNamesInHat
-#                    print("Player " + str(NonVoter) + " didn't vote to lynch a town.")
-                if NewNumber<0:
-                    NewNumber=0
+#                    #print("Player " + str(NonVoter) + " didn't vote to lynch a town.")
+                NonVoterAlignment = GetAttributeFromPlayer(NonVoter,'Alignment')
+                if NonVoterAlignment == 'Town':
+                    NewNumber = int(NewNumber * .77)
+                elif NonVoterAlignment == 'Mafia':
+                    NewNumber = int(NewNumber * (1.3 + (Day * .07)))
+                if NewNumber<1:
+                    NewNumber=1
                 WriteAttributeToPlayer(NonVoter,'NumberOfNamesInHat',NewNumber)
-                print("Player " + str(NonVoter) + "'s odds are now " + str(GetAttributeFromPlayer(NonVoter,'NumberOfNamesInHat')))
+                #print("Player " + str(NonVoter) + "'s odds are now " + str(GetAttributeFromPlayer(NonVoter,'NumberOfNamesInHat')))
 
 
 def PickNameFromHatForLynch(PlayersToGoInHat):
@@ -356,13 +369,13 @@ def TryToPickTownPlayer(PlayerWhoIsChoosing,PlayersNotEligible):
         PlayersToGoInHat = UnfilteredListOfPlayersForHat
     for PlayerInHat in PlayersToGoInHat: #Now go through each player who's going into the hat
         NumberOfNamesFromPlayerList = int(GetAttributeFromPlayer(PlayerInHat,'NumberOfNamesInHat'))
-        if NumberOfNamesFromPlayerList >=130 and GetAttributeFromPlayer(PlayerInHat,'InnocentChild') != "Yes": #If the candidate is probably mafia, don't add them.
+        if NumberOfNamesFromPlayerList >=1000 and GetAttributeFromPlayer(PlayerInHat,'InnocentChild') != "Yes": #If the candidate is probably mafia, don't add them.
             NumberOfTimesToGoInHat = 0
         else: #If the candidate might not be mafia, figure out how many names to add (reversing polarity)
-            if NumberOfNamesFromPlayerList >= 100:
-                NumberOfTimesToGoInHat = 100 - (NumberOfNamesFromPlayerList - 100)
+            if NumberOfNamesFromPlayerList >= 500:
+                NumberOfTimesToGoInHat = 500 - (NumberOfNamesFromPlayerList - 500)
             else:
-                NumberOfTimesToGoInHat = 100 + (100 - NumberOfNamesFromPlayerList)
+                NumberOfTimesToGoInHat = 500 + (500 - NumberOfNamesFromPlayerList)
             # Increase chances for person who is known to be town through Friendly Neighbour
             if len(FriendlyNeighbourResults) > 0:
                 for FriendlyNeighbourResult in FriendlyNeighbourResults:
@@ -387,7 +400,7 @@ def TryToPickTownPlayer(PlayerWhoIsChoosing,PlayersNotEligible):
                                 NumberOfTimesToGoInHat = int(NumberOfTimesToGoInHat * 2.5)
                             elif Investigation['Alignment'] == 'Mafia':
                                 NumberOfTimesToGoInHat = int(NumberOfTimesToGoInHat / 2)
-                        elif FriendlyNeighbourResult['Revealed'] == 'Yes':
+                        elif Investigation['Revealed'] == 'Yes':
                             if Investigation['Alignment'] == 'Town':
                                 NumberOfTimesToGoInHat = int(NumberOfTimesToGoInHat * 2)
                             elif Investigation['Alignment'] == 'Mafia':
@@ -489,20 +502,21 @@ def TryToPickMafiaPlayer(PlayerWhoIsChoosing,PlayersNotEligible):
         return(0)
 
 def WillGetEnoughLynchVotes(TargetPlayerID):
+
     NotTargetPlayers = SearchPlayersFor('PlayerID','!=',str(TargetPlayerID))
     LivingPlayers = SearchPlayersFor('Alive','==',"'Yes'")
     PossibleVoters = ShuffleList(ReturnOneListWithCommonItemsFromTwoLists(LivingPlayers,NotTargetPlayers))
     ActualVoters = []
-    #print("Going to see if the following players will vote 'yes': " + str(PossibleVoters))
+    ##print("Going to see if the following players will vote 'yes': " + str(PossibleVoters))
     Votes = 0
     for Player in PossibleVoters:
-        #print("Going to see if the following player will vote 'yes': " + str(Player))
+        ##print("Going to see if the following player will vote 'yes': " + str(Player))
         if DoesPlayer1VoteForPlayer2(Player,TargetPlayerID) == 'Yes':
             ActualVoters.append(Player)
             Votes += 1
-            #print("Player " + str(Player) + " will vote yes, bringing the total votes to " + str(Votes))
+            ##print("Player " + str(Player) + " will vote yes, bringing the total votes to " + str(Votes))
             if Votes >= NumberOfVotesRequiredToLynch():
-                print("They're lynching player " + str(TargetPlayerID) + " and the people voting are " + str(ActualVoters))
+                #print("They're lynching player " + str(TargetPlayerID) + " and the people voting are " + str(ActualVoters))
                 return('Yes',ActualVoters)
     return('No',[])
 
@@ -585,10 +599,10 @@ def GetYesOrNoFromStableProbability(Effect,EffectStrength):
             ProbabilityPercentage = 25
     RandomNumber = randint(1,100)
     if RandomNumber < ProbabilityPercentage:
-#        print("Random Number " + str(RandomNumber) + " was lower than " + str(ProbabilityPercentage))
+#        #print("Random Number " + str(RandomNumber) + " was lower than " + str(ProbabilityPercentage))
         return('Yes')
     else:
-#        print("Random Number " + str(RandomNumber) + " was equal to or higher than " + str(ProbabilityPercentage))
+#        #print("Random Number " + str(RandomNumber) + " was equal to or higher than " + str(ProbabilityPercentage))
         return('No')
 
 
@@ -600,30 +614,30 @@ def GetYesOrNoFromChangingProbability(Effect,EffectStrength):
     ProportionOfPlayers = len(SearchPlayersFor('Alive','==',"'Yes'")) / len(PlayerList)
     Probability = ((MaximumProbability - MinimumProbability) / (CriticalProportion - MaximumProbability) * (ProportionOfPlayers - MaximumProbability)) + MinimumProbability
     Probability = max(Probability, MinimumProbability)
-#    print("Probability is " + str(Probability))
+#    #print("Probability is " + str(Probability))
     if Effect == 'Yes':
         if EffectStrength == 'Strong':
             Probability = Probability * 2
-#            print("Probability has a Strong Yes modifier and is now " + str(Probability))
+#            #print("Probability has a Strong Yes modifier and is now " + str(Probability))
         elif EffectStrength == 'Weak':
             Probability = Probability * 1.4
-#            print("Probability has a Weak Yes modifier and is now " + str(Probability))
+#            #print("Probability has a Weak Yes modifier and is now " + str(Probability))
     if Effect == 'No':
         if EffectStrength == 'Strong':
             Probability = Probability / 2
-#            print("Probability has a Strong No modifier and is now " + str(Probability))
+#            #print("Probability has a Strong No modifier and is now " + str(Probability))
         elif EffectStrength == 'Weak':
             Probability = Probability / 1.4
-#            print("Probability has a Weak No modifier and is now " + str(Probability))
+#            #print("Probability has a Weak No modifier and is now " + str(Probability))
     Probability = min(Probability, 1)
     ProbabilityPercentage = Probability * 100
     ProbabilityPercentage = int(ProbabilityPercentage)
     RandomNumber = randint(1,100)
     if RandomNumber < ProbabilityPercentage:
-#        print("Random Number " + str(RandomNumber) + " was lower than " + str(ProbabilityPercentage))
+#        #print("Random Number " + str(RandomNumber) + " was lower than " + str(ProbabilityPercentage))
         return('Yes')
     else:
-#        print("Random Number " + str(RandomNumber) + " was equal to or higher than " + str(ProbabilityPercentage))
+#        #print("Random Number " + str(RandomNumber) + " was equal to or higher than " + str(ProbabilityPercentage))
         return('No')
 
 def EffectOfInvestigationsOnLynchVote(Player1,Player2,Player1TeamNumber,Player1Alignment):
@@ -707,10 +721,10 @@ def SeeIfAnyOneMafiaTeamHasTheMajority():
     LivingPlayers = SearchPlayersFor('Alive',"==","'Yes'")
     Majority = NumberOfVotesRequiredToLynch()
     MafiaTeams = BuildListOfTeamNumbers("Mafia")
-    print("Seeing if any one MafiaTeam out of Teams " + str(MafiaTeams) + " has " + str(Majority) + " votes.")
+    #print("Seeing if any one MafiaTeam out of Teams " + str(MafiaTeams) + " has " + str(Majority) + " votes.")
     for TeamNumber in MafiaTeams: #See if each scum team has the votes
         ListOfLivingPlayersInTeam = ReturnOneListWithCommonItemsFromTwoLists(SearchPlayersFor('Alive',"==","'Yes'"), SearchPlayersFor('Team',"==",TeamNumber))
-        print("List of living players in team " + str(TeamNumber) +": " + str(ListOfLivingPlayersInTeam))
+        #print("List of living players in team " + str(TeamNumber) +": " + str(ListOfLivingPlayersInTeam))
         if len(ListOfLivingPlayersInTeam) >= Majority:
             return('Yes')
     return('No')
@@ -723,8 +737,8 @@ def CheckForVictory():
     LivingMafiaPlayers = ShuffleList(ReturnOneListWithCommonItemsFromTwoLists(LivingPlayers,MafiaPlayers))
     TownPlayers = SearchPlayersFor('Alignment','==',"'Town'")
     LivingTownPlayers = ShuffleList(ReturnOneListWithCommonItemsFromTwoLists(LivingPlayers,TownPlayers))
-    print("Living Town Players: " + str(LivingTownPlayers))
-    print("Living Mafia Players: " + str(LivingMafiaPlayers))
+    #print("Living Town Players: " + str(LivingTownPlayers))
+    #print("Living Mafia Players: " + str(LivingMafiaPlayers))
     if len(LivingMafiaPlayers) == 0:
         WinningTeam = "Town"
     elif len(LivingTownPlayers) == 0:
@@ -739,7 +753,7 @@ def ConsiderRevealingFriendlyNeighbours():
     for Result in FriendlyNeighbourResults:
         if Result['Revealed'] == 'No' and GetAttributeFromPlayer(Result['Listener'],'Alive') == 'Yes' and GetAttributeFromPlayer(Result['Teller'],'Alive') == 'Yes' and GetAttributeFromPlayer(Result['Listener'],'Alignment') == 'Town':
             if GetYesOrNoFromChangingProbability('Yes','Weak'):
-                print("Player " + str(Result['Listener']) + " is revealing that Player " + str(Result ['Teller']) + " is a Friendly Neighbour.")
+                #print("Player " + str(Result['Listener']) + " is revealing that Player " + str(Result ['Teller']) + " is a Friendly Neighbour.")
                 Result['Revealed'] = 'Yes'
 
 def ConsiderRevealingInvestigations():
@@ -758,13 +772,13 @@ def ConsiderRevealingInvestigations():
                     WillReveal = GetYesOrNoFromChangingProbability('No','Weak')
                 if WillReveal == 'Yes':
                     Result['Revealed'] = "Yes"
-                    WriteAttributeToPlayer(Result['Cop'],'NumberOfNamesInHat',10)
+                    WriteAttributeToPlayer(Result['Cop'],'NumberOfNamesInHat',50)
                     if Result['Alignment'] == "Town":
-                        WriteAttributeToPlayer(Result['Target'],'NumberOfNamesInHat',10)
+                        WriteAttributeToPlayer(Result['Target'],'NumberOfNamesInHat',50)
                     if Result['Alignment'] == "Mafia":
-                        WriteAttributeToPlayer(Result['Target'],'NumberOfNamesInHat',300)
+                        WriteAttributeToPlayer(Result['Target'],'NumberOfNamesInHat',1500)
                         MafiaRevealedToday.append(Result['Target'])
-                    print("Player " + str(Result['Cop']) + " just revealed that they investigated Player " + str(Result['Target']) + " and found that they are " + str(Result['Alignment']))
+                    #print("Player " + str(Result['Cop']) + " just revealed that they investigated Player " + str(Result['Target']) + " and found that they are " + str(Result['Alignment']))
 
 def SimulateSingleGame():
     InitiateSingleGameVariables()
@@ -778,33 +792,33 @@ def SimulateSingleGame():
         Night += 1
         TimeCounter += 1
         #Day cycle
-        print()
-        print("Day " + str(Day))
+        #print()
+        #print("Day " + str(Day))
         if not Day in DaysThatDoNotHappen:
             ConsiderRevealingInvestigations()
             ConsiderRevealingFriendlyNeighbours()
             TryToLynch()
         CheckForVictory()
         LivingPlayers = SearchPlayersFor('Alive','==',"'Yes'")
-        print("The remaining living players at the end of Day " + str(Day) + " are " + str(LivingPlayers))
+        #print("The remaining living players at the end of Day " + str(Day) + " are " + str(LivingPlayers))
         if WinningTeam != '':
             DayOrNightWhenGameEnded = "D" + str(Day)
         else:   #If no winning team at the end of the day, do the night
             #Night cycle
             TimeCounter += 1
-            print()
-            print("Night " + str(Night))
+            #print()
+            #print("Night " + str(Night))
             NightRoutine()
             CheckForVictory()
             if WinningTeam != '':
                 DayOrNightWhenGameEnded = "N" + str(Night)
             LivingPlayers = SearchPlayersFor('Alive','==',"'Yes'")
-            print("The remaining living players at the end of Night " + str(Night) + " are " + str(LivingPlayers))
+            #print("The remaining living players at the end of Night " + str(Night) + " are " + str(LivingPlayers))
     LivingPlayers = SearchPlayersFor('Alive','==',"'Yes'")
     EndingMoment = str(TimeCounter) + "(" + str(DayOrNightWhenGameEnded) + ")"
-    print()
-    print("Winners = " + WinningTeam)
-    print("Ending moment = " + str(TimeCounter) + "(" + str(DayOrNightWhenGameEnded) + ")")
+    #print()
+    #print("Winners = " + WinningTeam)
+    #print("Ending moment = " + str(TimeCounter) + "(" + str(DayOrNightWhenGameEnded) + ")")
     return(EndingMoment,WinningTeam)
 
 
@@ -843,12 +857,12 @@ def NightRoutine():
     ProcessTeamNightKillActions()
     ProcessVigilanteKillActions()
     if Night not in NightsOnWhichThereAreNoKills:
-        print("The night kills are not being skipped because this night is not in " + str(NightsOnWhichThereAreNoKills))
+        #print("The night kills are not being skipped because this night is not in " + str(NightsOnWhichThereAreNoKills))
         for ActualNightKill in ActualNightKills:
-            print("Player " + str(ActualNightKill['Killer']) + " is night killing " + str(ActualNightKill['Victim']))
+            #print("Player " + str(ActualNightKill['Killer']) + " is night killing " + str(ActualNightKill['Victim']))
             KillPlayer(ActualNightKill['Killer'],ActualNightKill['Victim'],'Night')
-    else:
-        print("The night kills are being skipped because this night is in " + str(NightsOnWhichThereAreNoKills))
+    #else:
+        #print("The night kills are being skipped because this night is in " + str(NightsOnWhichThereAreNoKills))
 
 
 def ProcessDoctorActions():
@@ -895,14 +909,14 @@ def ProcessFriendlyNeighbourActions():
     global ThisTurnsFriendlyNeighbourActions
     global ThisNightsCommutings
     for FriendlyNeighbourAction in ThisTurnsFriendlyNeighbourActions:
-        #print("Processing Friendly Neighour: " + str(FriendlyNeighbourAction))
+        ##print("Processing Friendly Neighour: " + str(FriendlyNeighbourAction))
         ActualTarget = FindBusDrivingPairs(FriendlyNeighbourAction['Target'])
-        #print("The Friendly Neighbour Actual Target is " + str(ActualTarget))
+        ##print("The Friendly Neighbour Actual Target is " + str(ActualTarget))
         for Target in ActualTarget:
-            #print("adding a target!")
+            ##print("adding a target!")
             if Target not in ThisNightsCommutings:
                 FriendlyNeighbourResults.append({'Teller':FriendlyNeighbourAction['FriendlyNeighbour'],'Listener':Target,'IntendedListener':FriendlyNeighbourAction['Target'],'Revealed':'No'})
-    #print("After processing Friendly Neighbours, FriendlyNeighbourResults = " + str(FriendlyNeighbourResults))
+    ##print("After processing Friendly Neighbours, FriendlyNeighbourResults = " + str(FriendlyNeighbourResults))
 
 def ProcessTeamNightKillActions():
     global TeamNightKillActions
@@ -919,12 +933,12 @@ def ProcessTeamNightKillActions():
 def FindBusDrivingPairs(PlayerID):
     ReturnedPlayerIDs = []
     global BusDrivings
-    #print("BusDrivings = " + str(BusDrivings))
+    ##print("BusDrivings = " + str(BusDrivings))
     if BusDrivings == []:
-        #print("No Busdrivings.")
+        ##print("No Busdrivings.")
         ReturnedPlayerIDs.append(PlayerID)
     else:
-        #print("Some Busdrivings.")
+        ##print("Some Busdrivings.")
         for BusDriving in BusDrivings:
             if BusDriving[0] == PlayerID:
                 ReturnedPlayerIDs.append(BusDriving[1])
@@ -932,7 +946,7 @@ def FindBusDrivingPairs(PlayerID):
                 ReturnedPlayerIDs.append(BusDriving[0])
             else:
                 ReturnedPlayerIDs.append(PlayerID)
-    #print("Returning " + str(ReturnedPlayerIDs))
+    ##print("Returning " + str(ReturnedPlayerIDs))
     return(ReturnedPlayerIDs)
 
 
@@ -964,12 +978,12 @@ def ReceiveRoleBlockingActions():
                     global NightsOnWhichThereAreNoKills
                     global ThisNightsCommutings
                     if GetAttributeFromPlayer(PlayerToBeRoleBlocked,'ParanoidGunOwner') == 'Yes' and GetAttributeFromPlayer(PlayerToBeRoleBlocked,'ParanoidGunOwnerShots') != 0 and Night not in NightsOnWhichThereAreNoKills and PlayerToBeRoleBlocked not in ThisNightsCommutings:
-                        print("Player " + str(RoleBlocker) + " tried to roleblock a PGO and is now getting killed.")
+                        #print("Player " + str(RoleBlocker) + " tried to roleblock a PGO and is now getting killed.")
                         PGOReaction(PlayerToBeRoleBlocked,RoleBlocker)
                     else:
                         WriteAttributeToPlayer(RoleBlocker, "RoleBlockerShots", GetAttributeFromPlayer(RoleBlocker, "RoleBlockerShots")-1)
                         ThisNightsRoleBlockings.append({'RoleBlocker': RoleBlocker, 'Target' : PlayerToBeRoleBlocked})
-                        print("Player " + str(RoleBlocker) + " is roleblocking " + str(PlayerToBeRoleBlocked))
+                        #print("Player " + str(RoleBlocker) + " is roleblocking " + str(PlayerToBeRoleBlocked))
 
 
 def PGOReaction(Killer,Victim):
@@ -1009,16 +1023,16 @@ def ReceiveBusDrivingActions():
                         global NightOnWhichThereAreNoKills
                         global ThisNightsCommutings
                         if GetAttributeFromPlayer(BusDrivenPlayer1,'ParanoidGunOwner') == 'Yes' and GetAttributeFromPlayer(BusDrivenPlayer1,'ParanoidGunOwnerShots') != 0 and Night not in NightsOnWhichThereAreNoKills and BusDrivenPlayer1 not in ThisNightsCommutings:
-                            print("Player " + str(BusDriver) + " tried to busdrive a PGO and is now getting killed.")
+                            #print("Player " + str(BusDriver) + " tried to busdrive a PGO and is now getting killed.")
                             PGOReaction(BusDrivenPlayer1,BusDriver)
                         elif GetAttributeFromPlayer(BusDrivenPlayer2,'ParanoidGunOwner') == 'Yes' and GetAttributeFromPlayer(BusDrivenPlayer2,'ParanoidGunOwnerShots') != 0 and Night not in NightsOnWhichThereAreNoKills and BusDrivenPlayer2 not in ThisNightsCommutings:
-                            print("Player " + str(BusDriver) + " tried to busdrive a PGO and is now getting killed.")
+                            #print("Player " + str(BusDriver) + " tried to busdrive a PGO and is now getting killed.")
                             PGOReaction(BusDrivenPlayer2,BusDriver)
                         else:
-                            if BusDrivenPlayer1 in ThisNightsCommutings or BusDrivenPlayer2 in ThisNightsCommutings:
-                                print("Tried to busdrive an active commuter, and so failed.")
-                            else:
-                                print("On this night, Player " + str(BusDriver) + " is busdriving Player " + str(BusDrivenPlayer1) + " and Player " + str(BusDrivenPlayer2))
+                            if not (BusDrivenPlayer1 in ThisNightsCommutings or BusDrivenPlayer2 in ThisNightsCommutings):
+                                #print("Tried to busdrive an active commuter, and so failed.")
+                            #else:
+                                #print("On this night, Player " + str(BusDriver) + " is busdriving Player " + str(BusDrivenPlayer1) + " and Player " + str(BusDrivenPlayer2))
                                 BusDrivings.append([BusDrivenPlayer1,BusDrivenPlayer2])
 
 
@@ -1062,10 +1076,10 @@ def ReceiveTeamNightKillActions():
                         global NightsOnWhichThereAreNoKills
                         global ThisNightsCommutings
                         if GetAttributeFromPlayer(ActualTarget,'ParanoidGunOwner') == 'Yes' and GetAttributeFromPlayer(Target,'ParanoidGunOwnerShots') != 0 and Night not in NightsOnWhichThereAreNoKills and ActualTarget not in ThisNightsCommutings:
-                            print("Player " + str(ChosenTeamKiller) + " tried to TeamKill a PGO and is now getting killed.")
+                            #print("Player " + str(ChosenTeamKiller) + " tried to TeamKill a PGO and is now getting killed.")
                             PGOReaction(ActualTarget,ChosenTeamKiller)
                     TeamNightKillActions.append({'Killer': ChosenTeamKiller,'Victim': Target})
-                    print("On this night, Player " + str(ChosenTeamKiller) + " is NightKilling Player " + str(Target) + " for team " + str(Team))
+                    #print("On this night, Player " + str(ChosenTeamKiller) + " is NightKilling Player " + str(Target) + " for team " + str(Team))
 
 
 def ReceiveCommuterActions():
@@ -1090,7 +1104,7 @@ def ReceiveCommuterActions():
             if CommuterActiveTonight == "Yes":
                 WriteAttributeToPlayer(Commuter, "CommuterShots", GetAttributeFromPlayer(Commuter, "CommuterShots")-1)
                 ThisNightsCommutings.append(Commuter)
-                print("Player " + str(Commuter) + " is commuting.")
+                #print("Player " + str(Commuter) + " is commuting.")
 
 
 def ReceiveVigilanteKillActions():
@@ -1135,11 +1149,11 @@ def ReceiveVigilanteKillActions():
                     global ThisNightsCommutings
                     for ActualTarget in ActualTargets:
                         if GetAttributeFromPlayer(ActualTarget,'ParanoidGunOwner') == 'Yes' and GetAttributeFromPlayer(Target,'ParanoidGunOwnerShots') != 0 and Night not in NightsOnWhichThereAreNoKills and ActualTarget not in ThisNightsCommutings:
-                            print("Player " + str(Vigilante) + " tried to VigilanteKill a PGO and is now getting killed.")
+                            #print("Player " + str(Vigilante) + " tried to VigilanteKill a PGO and is now getting killed.")
                             PGOReaction(ActualTarget,Vigilante)
                     WriteAttributeToPlayer(Vigilante, "VigilanteShots", GetAttributeFromPlayer(Vigilante, "VigilanteShots")-1)
                     VigilanteActions.append({'Killer': Vigilante,'Victim': Target})
-                    print("On this night, Player " + str(Vigilante) + " is NightKilling Player " + str(Target) + " as a Vigilante.")
+                    #print("On this night, Player " + str(Vigilante) + " is NightKilling Player " + str(Target) + " as a Vigilante.")
 
 
 def ReceiveDoctorActions():
@@ -1178,14 +1192,14 @@ def ReceiveDoctorActions():
                     global ThisNightsCommutings
                     for ActualTarget in ActualTargets:
                         if GetAttributeFromPlayer(ActualTarget,'ParanoidGunOwner') == 'Yes' and GetAttributeFromPlayer(ActualTarget,'ParanoidGunOwnerShots') != 0 and Night not in NightsOnWhichThereAreNoKills and ActualTarget not in ThisNightsCommutings:
-                            print("Player " + str(Doctor) + " tried to doctor a PGO and is now getting killed.")
+                            #print("Player " + str(Doctor) + " tried to doctor a PGO and is now getting killed.")
                             PGOReaction(ActualTarget,Doctor)
                             PGOKilled = "Yes"
                     if PGOKilled == 'No':
                         WriteAttributeToPlayer(Doctor, "DoctorShots", GetAttributeFromPlayer(Doctor, "DoctorShots")-1)
                         ThisNightsDoctorActions.append({'Doctor': Doctor, 'Target' : PlayerToBeDoctored})
                         PlayersTargetedByDoctors.append(PlayerToBeDoctored)
-                        print("On this night, Player " + str(Doctor) + " is Doctoring " + str(PlayerToBeDoctored))
+                        #print("On this night, Player " + str(Doctor) + " is Doctoring " + str(PlayerToBeDoctored))
 
 
 def ReceiveFriendlyNeighbourActions():
@@ -1224,7 +1238,7 @@ def ReceiveFriendlyNeighbourActions():
                 FriendlyNeighbourTeam = GetAttributeFromPlayer(FriendlyNeighbour,'Team')
                 if FriendlyNeighbourTeam != 0:
                     WillNotTell += SearchPlayersFor('Team','==',FriendlyNeighbourTeam)
-                    print("Friendly Neighbour, player " + str(FriendlyNeighbour) + " is not going to tell " +str(WillNotTell))
+                    #print("Friendly Neighbour, player " + str(FriendlyNeighbour) + " is not going to tell " +str(WillNotTell))
                 Target = TryToPickTownPlayer(FriendlyNeighbour,WillNotTell)
                 if Target != 0:
                     PGOKilled = 'No'
@@ -1233,13 +1247,13 @@ def ReceiveFriendlyNeighbourActions():
                     global ThisNightsCommutings
                     for ActualTarget in ActualTargets:
                         if GetAttributeFromPlayer(ActualTarget,'ParanoidGunOwner') == 'Yes' and GetAttributeFromPlayer(Target,'ParanoidGunOwnerShots') != 0 and Night not in NightsOnWhichThereAreNoKills and ActualTarget not in ThisNightsCommutings:
-                            print("Player " + str(FriendlyNeighbour) + " tried to friendly neighbour a PGO and is now getting killed.")
+                            #print("Player " + str(FriendlyNeighbour) + " tried to friendly neighbour a PGO and is now getting killed.")
                             PGOReaction(ActualTarget,FriendlyNeighbour)
                             PGOKilled = "Yes"
                     if PGOKilled == 'No':
                         WriteAttributeToPlayer(FriendlyNeighbour, "FriendlyNeighbourShots", GetAttributeFromPlayer(FriendlyNeighbour, "FriendlyNeighbourShots")-1)
                         ThisTurnsFriendlyNeighbourActions.append({'FriendlyNeighbour': FriendlyNeighbour, 'Target' : Target})
-                        print("On this night, Player " + str(FriendlyNeighbour) + " is being a Friendly Neighbour and informing Player " + str(Target))
+                        #print("On this night, Player " + str(FriendlyNeighbour) + " is being a Friendly Neighbour and informing Player " + str(Target))
 
 
 def ReceiveCopActions():
@@ -1277,13 +1291,13 @@ def ReceiveCopActions():
                     ActualTargets = FindBusDrivingPairs(Target)
                     for ActualTarget in ActualTargets:
                         if GetAttributeFromPlayer(ActualTarget,'ParanoidGunOwner') == 'Yes' and GetAttributeFromPlayer(Target,'ParanoidGunOwnerShots') != 0 and Night not in NightsOnWhichThereAreNoKills and ActualTarget not in ThisNightsCommutings:
-                            print("Player " + str(Cop) + " tried to investigate a PGO and is now getting killed.")
+                            #print("Player " + str(Cop) + " tried to investigate a PGO and is now getting killed.")
                             PGOReaction(ActualTarget,Cop)
                             PGOKilled = "Yes"
                     if PGOKilled == 'No':
                         WriteAttributeToPlayer(Cop, "CopShots", GetAttributeFromPlayer(Cop, "CopShots")-1)
                         ThisNightsInvestigationActions.append({'Cop': Cop, 'Target' : Target})
-                        print("On this night, Player " + str(Cop) + " is Investigating Player " + str(Target))
+                        #print("On this night, Player " + str(Cop) + " is Investigating Player " + str(Target))
 
 
 def GetPlayersWhoCopWillNotInvestigate(Cop):
@@ -1316,14 +1330,17 @@ ResultsFile = open('results.txt','w')
 i=0
 TownVictories = 0
 MafiaVictories = 0
-while i<100:
+while i<1000:
     InitiateGlobalVariables()
     EndingTime, EndingTeam = SimulateSingleGame()
-    ResultsFile .write(EndingTime + ", " + EndingTeam + "\n")
+    #ResultsFile.write(EndingTime + ", " + EndingTeam + "\n")
     if EndingTeam == "Town":
         TownVictories += 1
     else:
         MafiaVictories +=1
+    print("Iteration " + str(i))
+    print("Town Victories = " + str(TownVictories))
+    print("Mafia Victories = " + str(MafiaVictories))
     i+=1
 
 print("Town Victories = " + str(TownVictories))

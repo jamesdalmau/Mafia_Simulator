@@ -15,12 +15,15 @@ TeamNightKill="Yes"
 ***
 PlayerID=4
 Alignment="Town"
+Team=2
 ***
 PlayerID=5
 Alignment="Town"
+Team=2
 ***
 PlayerID=6
 Alignment="Town"
+Team=2
 ***
 PlayerID=7
 Alignment="Town"
