@@ -1338,10 +1338,10 @@ global TownPunishRewardMultiplier
 global MafiaStartingNamesInHat
 global TownStartingNamesInHat
 
-MafiaPunishRewardMultiplier = 1.12
-TownPunishRewardMultiplier = .915
-MafiaStartingNamesInHat = 520
-TownStartingNamesInHat = 490
+MafiaPunishRewardMultiplier = 1.25
+TownPunishRewardMultiplier = .9
+MafiaStartingNamesInHat = 540
+TownStartingNamesInHat = 480
 
 PrintDebugLines = 0
 ResultsFile = open('results.txt','w')
