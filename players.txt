@@ -9,7 +9,9 @@ Team=1
 TeamNightKill="Yes"
 ***
 PlayerID=3
-Alignment="Town"
+Alignment="Mafia"
+Team=1
+TeamNightKill="Yes"
 ***
 PlayerID=4
 Alignment="Town"
@@ -33,5 +35,11 @@ PlayerID=10
 Alignment="Town"
 ***
 PlayerID=11
+Alignment="Town"
+***
+PlayerID=12
+Alignment="Town"
+***
+PlayerID=13
 Alignment="Town"
 ***

@@ -5,14 +5,11 @@ import random
 import math
 
 
-def InitiateGlobalVariables():
-    CreatePlayerList()
-
-
 def InitiateSingleGameVariables(): # Set up variables to run a single game
     global PlayerID
     PlayerID = 0  # This zeroes the counter that is used by function AddPlayer when populating the player list
     global PlayerList
+    CreatePlayerList()
     global GlobalPlayerList
     PlayerList = GlobalPlayerList  # This creates a fresh copy of the player list, for use in this specific game
     global Day
@@ -149,6 +146,8 @@ def CreatePlayerList(): # Reads players.txt and makes the main list for use in a
     PlayerID=1
     PlayerSetupFile = list(open('players.txt', 'r')) #Read players.txt and create a list
     PlayerToAdd = ReturnBlankPlayer(1)
+    global TownStartingNamesInHat
+    global MafiaStartingNamesInHat
     for LineFromTextFile in PlayerSetupFile:
         if LineFromTextFile[:3] != '***':   # If the line is not "***", interpret the line to add it to the PlayerToAdd dictionary
             if (len(LineFromTextFile) > 0) and LineFromTextFile[:1] != '#': #If the line isn't commented or empty
@@ -159,9 +158,9 @@ def CreatePlayerList(): # Reads players.txt and makes the main list for use in a
                 PlayerToAdd['NumberOfNamesInHat'] = 1
             else:
                 if PlayerToAdd['Alignment'] == 'Mafia':
-                    PlayerToAdd['NumberOfNamesInHat'] = 510
+                    PlayerToAdd['NumberOfNamesInHat'] = MafiaStartingNamesInHat
                 elif PlayerToAdd['Alignment'] == 'Town':
-                    PlayerToAdd['NumberOfNamesInHat'] = 490
+                    PlayerToAdd['NumberOfNamesInHat'] = TownStartingNamesInHat
             GlobalPlayerList.append(PlayerToAdd.copy())  # Add PlayerToAdd to the global PlayerList list
             PlayerID += 1
             PlayerToAdd = ReturnBlankPlayer(PlayerID) # Prepare the next player
@@ -280,6 +279,8 @@ def KillPlayer(Killer,Victim,KillType):
 
 
 def PunishAndRewardVotersAfterLynch(Voters,LynchedPlayer):
+    global MafiaPunishRewardMultiplier
+    global TownPunishRewardMultiplier
     MinimumProbability = 1
     MaximumProbability = 2.5
     CriticalProportion = .6
@@ -299,9 +300,9 @@ def PunishAndRewardVotersAfterLynch(Voters,LynchedPlayer):
  #           DebugPrint("Player " + str(Voter) + " voted to lynch a town.")
         VoterAlignment = GetAttributeFromPlayer(Voter,'Alignment')
         if VoterAlignment == 'Town':
-            NewNumber = int(NewNumber * .92)
+            NewNumber = int(NewNumber * TownPunishRewardMultiplier)
         elif VoterAlignment == 'Mafia':
-            NewNumber = int(NewNumber * 1.15)
+            NewNumber = int(NewNumber * MafiaPunishRewardMultiplier)
         if NewNumber<1:
             NewNumber=1
         WriteAttributeToPlayer(Voter,'NumberOfNamesInHat',NewNumber)
@@ -321,9 +322,9 @@ def PunishAndRewardVotersAfterLynch(Voters,LynchedPlayer):
 #                    DebugPrint("Player " + str(NonVoter) + " didn't vote to lynch a town.")
                 NonVoterAlignment = GetAttributeFromPlayer(NonVoter,'Alignment')
                 if NonVoterAlignment == 'Town':
-                    NewNumber = int(NewNumber * .9)
+                    NewNumber = int(NewNumber * TownPunishRewardMultiplier)
                 elif NonVoterAlignment == 'Mafia':
-                    NewNumber = int(NewNumber * 1.15)
+                    NewNumber = int(NewNumber * MafiaPunishRewardMultiplier)
                 if NewNumber<1:
                     NewNumber=1
                 WriteAttributeToPlayer(NonVoter,'NumberOfNamesInHat',NewNumber)
@@ -1332,15 +1333,25 @@ def DebugPrint(StringToPrint):
     if PrintDebugLines == 1:
         print(StringToPrint)
 
+global MafiaPunishRewardMultiplier
+global TownPunishRewardMultiplier
+global MafiaStartingNamesInHat
+global TownStartingNamesInHat
+
+MafiaPunishRewardMultiplier = 1.12
+TownPunishRewardMultiplier = .915
+MafiaStartingNamesInHat = 520
+TownStartingNamesInHat = 490
+
 PrintDebugLines = 0
 ResultsFile = open('results.txt','w')
+ResultsFile.write('Ending Day,Winning Team\n')
 i=0
 TownVictories = 0
 MafiaVictories = 0
-while i<10000:
-    InitiateGlobalVariables()
+while i<1000:
     EndingTime, EndingTeam = SimulateSingleGame()
-    #ResultsFile.write(EndingTime + ", " + EndingTeam + "\n")
+    ResultsFile.write(EndingTime + "," + EndingTeam + "\n")
     if EndingTeam == "Town":
         TownVictories += 1
     else:
