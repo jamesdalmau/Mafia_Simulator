@@ -709,22 +709,61 @@ def ShuffleList(InputList):
     return ReturnList
 
 
+def AssignNightActionsForEachPlayer():
+    global CurrentNightActions
+    global Night
+    global NightsOnWhichThereAreNoKills
+    CurrentNightActions = []
+    TeamsWithLivingPlayers = BuildListOfTeamNumbers()
+    NightOddOrEven = IsNumberOddOrEven(Night)
+    TeamKillers = []
+
+    #If this is not an inkbombed night, assign team night killers
+    if Night not in NightsOnWhichThereAreNoKills:
+        if len(TeamsWithLivingPlayers) > 0:
+            for Team in TeamsWithLivingPlayers:
+                if NightOddOrEven == "Odd":
+                    TeamNightKillSearchVariable = "'No' or 'Even'"
+                else:
+                    TeamNightKillSearchVariable = "'No' or 'Odd'"
+                LivingActiveTeamKillersInTeam = ReturnOneListWithCommonItemsFromThreeLists(SearchPlayersFor('Alive','==',"'Yes'"),SearchPlayersFor('Team',"==",Team),SearchPlayersFor('TeamNightKill',"1=",TeamNightKillSearchVariable))
+                if len(LivingActiveTeamKillersInTeam) > 0:
+                    ActiveTeamKillersWithNoOtherActions = []
+                    for Player in LivingTeamKillersInTeam:
+                        if PlayerHasActionsBesidesTeamNightKill(Player,TeamNightKillSearchVariable) == "No":
+                            ActiveTeamKillersWithNoOtherActions.append(Player)
+                    SelectedTeamKiller = 0
+                    if len(ActiveTeamKillersWithNoOtherActions) = 0:
+                        SelectedTeamKiller = PickRandomItemFromList(LivingActiveTeamKillersInTeam)
+                    else:
+                        SelectedTeamKiller = PickRandomItemFromList(ActiveTeamKillersWithNoOtherActions
+                    if SelectedTeamKiller != 0:
+                        CurrentNightActions.append({'Player' : SelectedTeamKiller, 'Action' : 'TeamNightKill')
+                        TeamKillers.append(SelectedTeamKiller)
+
+    #Go through every living player not in TeamKillers and assign them an action
+
+def PlayerHasActionsBesidesTeamNightKills(Player,NightActionSearchVariable):
+    AnyOtherActions = "No"
+    PossibleActions = ['FriendlyNeighbour','Cop','Commuter','Doctor','RoleBlocker','BusDriver','Vigilante']
+    for PossibleAction in PossibleActions:
+        if AnyOtherActions == "No":
+            if eval("GetAttributeFromPlayer(Player,'" + PossibleAction + "') != " + NightActionSearchVariable + " and GetAttributeFromPlayer(Player,'" + PossibleAction+ "') != 0") = True:
+                AnyOtherActions = "Yes"
+    return(AnyOtherActions)
+
+
+
+
 def BuildListOfTeamNumbers(Alignment):   #Return a list of the numbers of the teams that have living players
     #Alignment = "Mafia", "Town", ""
-    LivingPlayers = SearchPlayersFor('Alive',"==","'Yes'")
+    LivingPlayersInTeams = ReturnOneListWithCommonItemsFromTwoLists(SearchPlayersFor('Alive',"==","'Yes'"),SearchPlayersFor('Team',"!=",0))
     Teams = []
     for Player in LivingPlayers: #Build a list of the teams
         IsTeamAppropriateToAddToList = "No"
         TeamNumberForThisPlayer = GetAttributeFromPlayer(Player,'Team')
-        if Alignment == "":
-            if TeamNumberForThisPlayer != 0:
-                IsTeamAppropriateToAddToList = "Yes"
-        elif GetAttributeFromPlayer(Player,'Alignment') == Alignment:
-            if TeamNumberForThisPlayer != 0:
-                IsTeamAppropriateToAddToList = "Yes"
-        if IsTeamAppropriateToAddToList == "Yes":
-            if TeamNumberForThisPlayer not in Teams:
-                Teams.append(GetAttributeFromPlayer(Player,'Team'))
+        if (Alignment == "" or GetAttributeFromPlayer(Player,'Alignment') == Alignment) and TeamNumberForThisPlayer not in Teams:
+            Teams.append(GetAttributeFromPlayer(Player,'Team'))
     return(Teams)
 
 
