@@ -3,15 +3,14 @@ __author__ = 'Unit'
 from random import randint  # This gets the function that is used to get a random integer between two numbers
 import random
 import math
-
+import copy
 
 def InitiateSingleGameVariables(): # Set up variables to run a single game
     global PlayerID
     PlayerID = 0  # This zeroes the counter that is used by function AddPlayer when populating the player list
     global PlayerList
-    CreatePlayerList()
     global GlobalPlayerList
-    PlayerList = GlobalPlayerList  # This creates a fresh copy of the player list, for use in this specific game
+    PlayerList = copy.deepcopy(GlobalPlayerList)  # This creates a fresh copy of the player list, for use in this specific game
     global Day
     Day = 0
     global Night
@@ -140,14 +139,24 @@ def ReturnBlankPlayer(PlayerID):
     return(PlayerToReturn)
 
 
+def GetNumberOfPlayersFromTextFile(): # Reads players.txt and makes the main list for use in a single game
+    PlayerSetupFile = list(open('players.txt', 'r')) #Read players.txt and create a list
+    NumberOfPlayers = 0
+    for LineFromTextFile in PlayerSetupFile:
+        if LineFromTextFile[:3] == '***':
+            NumberOfPlayers += 1
+    return(NumberOfPlayers)
+
+
 def CreatePlayerList(): # Reads players.txt and makes the main list for use in a single game
-    global GlobalPlayerList
-    GlobalPlayerList = []
+    PlayerListToReturn = []
     PlayerID=1
     PlayerSetupFile = list(open('players.txt', 'r')) #Read players.txt and create a list
     PlayerToAdd = ReturnBlankPlayer(1)
     global TownStartingNamesInHat
     global MafiaStartingNamesInHat
+    global IndexList
+    IndexList = []
     for LineFromTextFile in PlayerSetupFile:
         if LineFromTextFile[:3] != '***':   # If the line is not "***", interpret the line to add it to the PlayerToAdd dictionary
             if (len(LineFromTextFile) > 0) and LineFromTextFile[:1] != '#': #If the line isn't commented or empty
@@ -161,10 +170,11 @@ def CreatePlayerList(): # Reads players.txt and makes the main list for use in a
                     PlayerToAdd['NumberOfNamesInHat'] = MafiaStartingNamesInHat
                 elif PlayerToAdd['Alignment'] == 'Town':
                     PlayerToAdd['NumberOfNamesInHat'] = TownStartingNamesInHat
-            GlobalPlayerList.append(PlayerToAdd.copy())  # Add PlayerToAdd to the global PlayerList list
+            PlayerListToReturn.append(PlayerToAdd.copy())  # Add PlayerToAdd to the global PlayerList list
+            IndexList.append(PlayerID)
             PlayerID += 1
             PlayerToAdd = ReturnBlankPlayer(PlayerID) # Prepare the next player
-
+    return(PlayerListToReturn)
 
 def SearchPlayersFor(Variable,Operator,Comparator): # Return a list of PlayerIDs for players who match criteria
     #Variable must be a simple string, the name of an item in the Player dictionary
@@ -178,10 +188,10 @@ def SearchPlayersFor(Variable,Operator,Comparator): # Return a list of PlayerIDs
 
 
 def GetAttributeFromPlayer(PlayerID,Attribute): # Get a value from an attribute belonging to a particular player
-    for Player in PlayerList:
-        if Player['PlayerID'] == PlayerID:
-            return(eval("Player['" + Attribute + "']"))
-            break
+    global IndexList
+    global PlayerList
+    Player = PlayerList[IndexList.index(PlayerID)]
+    return(eval("Player['" + Attribute + "']"))
 
 
 def WriteAttributeToPlayer(PlayerID,Attribute,ValueToWrite): # Change an attribute for a particular player
@@ -783,6 +793,11 @@ def ConsiderRevealingInvestigations():
 
 def SimulateSingleGame():
     InitiateSingleGameVariables()
+    global IndexList
+    global PlayerList
+    DebugPrint("PlayerList = " + str(PlayerList))
+    DebugPrint("IndexList = " + str(IndexList))
+
     global DaysThatDoNotHappen
     global Day
     global Night
@@ -1337,11 +1352,25 @@ global MafiaPunishRewardMultiplier
 global TownPunishRewardMultiplier
 global MafiaStartingNamesInHat
 global TownStartingNamesInHat
+global GlobalPlayerList
 
-MafiaPunishRewardMultiplier = 1.25
-TownPunishRewardMultiplier = .9
-MafiaStartingNamesInHat = 540
-TownStartingNamesInHat = 480
+NumberOfPlayers = GetNumberOfPlayersFromTextFile()
+print("Number Of Players = " +str(NumberOfPlayers))
+
+MafiaPunishRewardMultiplier = max((1.2903451676529 - (0.009457593688363 * NumberOfPlayers)),1)
+TownPunishRewardMultiplier = min((0.87159763313609 + (0.0032248520710059 * NumberOfPlayers)),1)
+MafiaStartingNamesInHat = int(max((551.73668639053 - (1.9852071005917 * NumberOfPlayers)),500))
+TownStartingNamesInHat = int(min((474.31656804734 + (0.92603550295856 * NumberOfPlayers)),500))
+
+print("MafiaPunishRewardMultiplier = " +str(MafiaPunishRewardMultiplier))
+print("TownPunishRewardMultiplier = " +str(TownPunishRewardMultiplier))
+print("MafiaStartingNamesInHat = " +str(MafiaStartingNamesInHat))
+print("TownStartingNamesInHat = " +str(TownStartingNamesInHat))
+
+
+GlobalPlayerList = CreatePlayerList()
+global IndexList
+
 
 PrintDebugLines = 0
 ResultsFile = open('results.txt','w')
