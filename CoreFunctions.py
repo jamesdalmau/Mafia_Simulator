@@ -20,7 +20,7 @@ def InitiateSingleGameVariables(): # Set up variables to run a single game
     global DaysThatDoNotHappen
     DaysThatDoNotHappen = []    #This is needed for the Beloved Princess
     global NightsOnWhichThereAreNoKills
-    NightsOnWhichThereAreNoKills = []   #This is needed for the Inkbomb
+    NightsOnWhichThereAreNoKills = []   #This is needed for the InkBomb
     global InvestigationResults
     InvestigationResults = []
     global FriendlyNeighbourResults
@@ -103,7 +103,7 @@ def ReturnBlankPlayer(PlayerID):
     PlayerToReturn['Alignment'] = 'None'            # "Town" or "Mafia" or "None"
     PlayerToReturn['Team'] = 0                      # 0 (for no team) or the number of the team (Town and Mafia team numbers must be different)
     PlayerToReturn['BelovedPrincess'] = 'No'        # "No", "Lynch", "Night" or "Either" (if not "No", must be Town. Other values refer to triggering type of kill.)
-    PlayerToReturn['Inkbomb'] = 'No'                 # # "No", "Lynch", "Night" or "Either" (if not "No", must be Mafia. Other values refer to triggering type of kill.)
+    PlayerToReturn['InkBomb'] = 'No'                 # # "No", "Lynch", "Night" or "Either" (if not "No", must be Mafia. Other values refer to triggering type of kill.)
     PlayerToReturn['ParanoidGunOwner'] = 'No'              # "Yes" or "No"
     PlayerToReturn['LynchBomb'] = 'No'              # "Yes" or "No"
     PlayerToReturn['NightBomb'] = 'No'              # "Yes" or "No"
@@ -266,17 +266,17 @@ def KillPlayer(Killer,Victim,KillType):
             WriteAttributeToPlayer(Victim,'Alive','No')   #kill player
             TestForDeputies(Victim)
             BelovedPrincess = GetAttributeFromPlayer(Victim,'BelovedPrincess')
-            Inkbomb = GetAttributeFromPlayer(Victim,'Inkbomb')
+            InkBomb = GetAttributeFromPlayer(Victim,'InkBomb')
             if BelovedPrincess == 'Either' or BelovedPrincess == KillType: # If player is a Beloved Princess
                 DebugPrint("Player " + str(Victim) + " was a Beloved Princess! Day " + str(Day + 1) + " will be skipped.")
                 global DaysThatDoNotHappen
                 DaysThatDoNotHappen.append(Day+1)
-            if Inkbomb == 'Either' or Inkbomb == KillType: # If player is an Inkbomb
+            if InkBomb == 'Either' or InkBomb == KillType: # If player is an InkBomb
                 if KillType == "Lynch":
                     NightOnWhichThereWillBeNoKills = Night
                 elif KillType == "Night":
                     NightOnWhichThereWillBeNoKills = Night+1
-                DebugPrint("Player " + str(Victim) + " was a Inkbomb! There can be no night kills on " + str(NightOnWhichThereWillBeNoKills) + ".")
+                DebugPrint("Player " + str(Victim) + " was a InkBomb! There can be no night kills on " + str(NightOnWhichThereWillBeNoKills) + ".")
                 global NightsOnWhichThereAreNoKills
                 NightsOnWhichThereAreNoKills.append(NightOnWhichThereWillBeNoKills)
             if KillType == 'Lynch' and GetAttributeFromPlayer(Victim,'LynchBomb') == 'Yes':
@@ -421,7 +421,7 @@ def TryToPickTownPlayer(PlayerWhoIsChoosing,PlayersNotEligible):
                 NumberOfTimesToGoInHat = NumberOfTimesToGoInHat * 3
             # Increase chances for person who is on same town team
             if PlayersTeam != 0 and PlayersAlignment == "Town":
-                if PlayersTeam == int(GetAttributeFromPlayer(PlayerInHat,"'Team'")):
+                if PlayersTeam == int(GetAttributeFromPlayer(PlayerInHat,"Team")):
                     NumberOfTimesToGoInHat = NumberOfTimesToGoInHat * 3
         #Now populate the hat
         i = 0
@@ -578,7 +578,7 @@ def DoesPlayer1VoteForPlayer2(Player1,Player2):
         # Test to see if the vote will be nullified because of teams
         if (Player1Team != 0) and (Player1Team == GetAttributeFromPlayer(Player2,'Team')):
             if Player1Alignment == 'Mafia':
-                if GetAttributeFromPlayer(Player2,'Inkbomb') == 'Yes':
+                if GetAttributeFromPlayer(Player2,'InkBomb') == 'Yes':
                     Effect = 'No'
                     EffectStrength = 'Weak'
                 else:
@@ -724,9 +724,9 @@ def AssignNightActionsForEachPlayer():
     NightOddOrEven = IsNumberOddOrEven(Night)
 
     if NightOddOrEven == "Odd":
-        NightSearchVariable = "'No' or 'Even'"
+        NightSearchVariable = "'' or 'No' or 'Even'"
     else:
-        NightSearchVariable = "'No' or 'Odd'"
+        NightSearchVariable = "'' or 'No' or 'Odd'"
 
     #If this is not an inkbombed night, assign team night killers
     if Night not in NightsOnWhichThereAreNoKills:
@@ -744,13 +744,16 @@ def AssignNightActionsForEachPlayer():
                     else:
                         SelectedTeamKiller = PickRandomItemFromList(ActiveTeamKillersWithNoOtherActions)
                     if SelectedTeamKiller != 0:
+                        print("Team " + str(Team) + " has selected Player " + str(SelectedTeamKiller) + " as the Team Night Killer.")
                         ReturnedPlayer, ReturnedAction, ReturnedAlternatives = PickNightActionForPlayer(SelectedTeamKiller,NightSearchVariable)
                         TonightsTeamKillers.append({'Player' : SelectedTeamKiller, 'AlternativeActions' : ReturnedAlternatives})
 
     #Go through every living player not in TeamKillers and assign them an action
     LivingPlayersNotTeamKilling = ReturnOneListWithCommonItemsFromTwoLists(SearchPlayersFor('Alive','==',"'Yes'"),SearchPlayersFor('PlayerID','not in',str(TonightsTeamKillers)))
     for Player in LivingPlayersNotTeamKilling:
+        print("Finding a night action for Player " + str(Player) + ".")
         ReturnedPlayer, ReturnedAction, ReturnedAlternatives = PickNightActionForPlayer(Player,NightSearchVariable)
+        print("Action returned is " + ReturnedAction + ".")
         if ReturnedAction == 'FriendlyNeighbour':
             TonightsFriendlyNeighbours.append({'Player' : ReturnedPlayer, 'AlternativeActions' : ReturnedAlternatives})
         elif ReturnedAction == 'Cop':
@@ -770,6 +773,7 @@ def AssignNightActionsForEachPlayer():
 
 def PickNightActionForPlayer(Player,NightSearchVariable):
     ThisPlayersPossibleNightActions = ReturnPlayersNonTeamKillActions(Player,NightSearchVariable)
+    DebugPrint("Player " + str(Player) + "'s possible night actions are " + str(ThisPlayersPossibleNightActions) +".")
     if len(ThisPlayersPossibleNightActions) > 0: #If the player has possible actions
         ChosenAction = ""
         PossibleActionsGivenNumberOfShots = []
@@ -785,7 +789,6 @@ def PickNightActionForPlayer(Player,NightSearchVariable):
             if Action != ChosenAction:
                 AlternativeActions.append(Action)
     return(Player,ChosenAction,AlternativeActions)
-
 
 
 def ReturnPlayersNonTeamKillActions(Player,NightActionSearchVariable):
@@ -1032,12 +1035,10 @@ def ProcessTeamNightKillActions():
 def FindBusDrivingPairs(PlayerID):
     ReturnedPlayerIDs = []
     global BusDrivings
-    DebugPrint("BusDrivings = " + str(BusDrivings))
     if BusDrivings == []:
-        DebugPrint("No Busdrivings.")
         ReturnedPlayerIDs.append(PlayerID)
     else:
-        DebugPrint("Some Busdrivings.")
+        DebugPrint("There's a busdriving happening.")
         for BusDriving in BusDrivings:
             if BusDriving[0] == PlayerID:
                 ReturnedPlayerIDs.append(BusDriving[1])
@@ -1045,7 +1046,7 @@ def FindBusDrivingPairs(PlayerID):
                 ReturnedPlayerIDs.append(BusDriving[0])
             else:
                 ReturnedPlayerIDs.append(PlayerID)
-    DebugPrint("Returning " + str(ReturnedPlayerIDs))
+    DebugPrint("Accounting for busdrivings (if any), the player actually targeted is " + str(ReturnedPlayerIDs))
     return(ReturnedPlayerIDs)
 
 
@@ -1115,6 +1116,7 @@ def ReceiveTeamNightKillActions(TonightsTeamKillers):
     TeamNightKillActions = []
     for TeamKillerEntry in TonightsTeamKillers:
         TeamKiller = TeamKillerEntry['Player']
+        Team = GetAttributeFromPlayer(TeamKiller,"Team")
         if GetAttributeFromPlayer(TeamKiller,'Alignment') == "Mafia":
             Target = TryToPickTownPlayer(TeamKiller,[])
         else:
@@ -1328,13 +1330,13 @@ GlobalPlayerList = CreatePlayerList()
 global IndexList
 
 
-PrintDebugLines = 0
+PrintDebugLines = 1
 ResultsFile = open('results.txt','w')
 ResultsFile.write('Ending Day,Winning Team\n')
 i=0
 TownVictories = 0
 MafiaVictories = 0
-while i<1000:
+while i<2:
     EndingTime, EndingTeam = SimulateSingleGame()
     ResultsFile.write(EndingTime + "," + EndingTeam + "\n")
     if EndingTeam == "Town":
