@@ -263,29 +263,30 @@ def KillPlayer(Killer,Victim,KillType):
             KillBecomesConvert = "Yes"
             DebugPrint("Player was a Saulus! Player is now Town.")
         if KillBecomesConvert == "No": #Proceed if kill wasn't converted
-            WriteAttributeToPlayer(Victim,'Alive','No')   #kill player
-            TestForDeputies(Victim)
-            BelovedPrincess = GetAttributeFromPlayer(Victim,'BelovedPrincess')
-            InkBomb = GetAttributeFromPlayer(Victim,'InkBomb')
-            if BelovedPrincess == 'Either' or BelovedPrincess == KillType: # If player is a Beloved Princess
-                DebugPrint("Player " + str(Victim) + " was a Beloved Princess! Day " + str(Day + 1) + " will be skipped.")
-                global DaysThatDoNotHappen
-                DaysThatDoNotHappen.append(Day+1)
-            if InkBomb == 'Either' or InkBomb == KillType: # If player is an InkBomb
-                if KillType == "Lynch":
-                    NightOnWhichThereWillBeNoKills = Night
-                elif KillType == "Night":
-                    NightOnWhichThereWillBeNoKills = Night+1
-                DebugPrint("Player " + str(Victim) + " was a InkBomb! There can be no night kills on " + str(NightOnWhichThereWillBeNoKills) + ".")
-                global NightsOnWhichThereAreNoKills
-                NightsOnWhichThereAreNoKills.append(NightOnWhichThereWillBeNoKills)
-            if KillType == 'Lynch' and GetAttributeFromPlayer(Victim,'LynchBomb') == 'Yes':
-                RandomVoterKilled = PickRandomItemFromList(Killer)
-                DebugPrint("Player " + str(Victim) + " was a LynchBomb. Random voter, Player " + str(RandomVoterKilled) + ", is targeted by the bomb.")
-                KillPlayer(Victim,RandomVoterKilled,'LynchBomb')   #Kill random voter
-            elif KillType == 'Night' and GetAttributeFromPlayer(Victim,'NightBomb') == 'Yes':
-                DebugPrint("Player " + str(Victim) + " was a NightBomb. Their killer, Player " + str(Killer) + ", is targeted by the bomb.")
-                KillPlayer(Victim,Killer,'NightBomb')   #Kill killer
+            if GetAttributeFromPlayer(Victim,'Alive') != 'No':
+                WriteAttributeToPlayer(Victim,'Alive','No')   #kill player
+                TestForDeputies(Victim)
+                BelovedPrincess = GetAttributeFromPlayer(Victim,'BelovedPrincess')
+                InkBomb = GetAttributeFromPlayer(Victim,'InkBomb')
+                if BelovedPrincess == 'Either' or BelovedPrincess == KillType: # If player is a Beloved Princess
+                    DebugPrint("Player " + str(Victim) + " was a Beloved Princess! Day " + str(Day + 1) + " will be skipped.")
+                    global DaysThatDoNotHappen
+                    DaysThatDoNotHappen.append(Day+1)
+                if InkBomb == 'Either' or InkBomb == KillType: # If player is an InkBomb
+                    if KillType == "Lynch":
+                        NightOnWhichThereWillBeNoKills = Night
+                    elif KillType == "Night":
+                        NightOnWhichThereWillBeNoKills = Night+1
+                    DebugPrint("Player " + str(Victim) + " was a InkBomb! There can be no night kills on " + str(NightOnWhichThereWillBeNoKills) + ".")
+                    global NightsOnWhichThereAreNoKills
+                    NightsOnWhichThereAreNoKills.append(NightOnWhichThereWillBeNoKills)
+                if KillType == 'Lynch' and GetAttributeFromPlayer(Victim,'LynchBomb') == 'Yes':
+                    RandomVoterKilled = PickRandomItemFromList(Killer)
+                    DebugPrint("Player " + str(Victim) + " was a LynchBomb. Random voter, Player " + str(RandomVoterKilled) + ", is targeted by the bomb.")
+                    KillPlayer(Victim,RandomVoterKilled,'LynchBomb')   #Kill random voter
+                elif KillType == 'Night' and GetAttributeFromPlayer(Victim,'NightBomb') == 'Yes':
+                    DebugPrint("Player " + str(Victim) + " was a NightBomb. Their killer, Player " + str(Killer) + ", is targeted by the bomb.")
+                    KillPlayer(Victim,Killer,'NightBomb')   #Kill killer
 
 
 def PunishAndRewardVotersAfterLynch(Voters,LynchedPlayer):
@@ -316,7 +317,7 @@ def PunishAndRewardVotersAfterLynch(Voters,LynchedPlayer):
         if NewNumber<1:
             NewNumber=1
         WriteAttributeToPlayer(Voter,'NumberOfNamesInHat',NewNumber)
-        DebugPrint("Player " + str(Voter) + "'s odds are now " + str(NewNumber))
+        #DebugPrint("Player " + str(Voter) + "'s odds are now " + str(NewNumber))
     #Punish and reward the non-voters
     NonVoters = SearchPlayersFor('Alive','==','"Yes"')
     for NonVoter in NonVoters:
@@ -338,7 +339,7 @@ def PunishAndRewardVotersAfterLynch(Voters,LynchedPlayer):
                 if NewNumber<1:
                     NewNumber=1
                 WriteAttributeToPlayer(NonVoter,'NumberOfNamesInHat',NewNumber)
-                DebugPrint("Player " + str(NonVoter) + "'s odds are now " + str(GetAttributeFromPlayer(NonVoter,'NumberOfNamesInHat')))
+                #DebugPrint("Player " + str(NonVoter) + "'s odds are now " + str(GetAttributeFromPlayer(NonVoter,'NumberOfNamesInHat')))
 
 
 def PickNameFromHatForLynch(PlayersToGoInHat):
@@ -513,19 +514,18 @@ def TryToPickMafiaPlayer(PlayerWhoIsChoosing,PlayersNotEligible):
         return(0)
 
 def WillGetEnoughLynchVotes(TargetPlayerID):
-
     NotTargetPlayers = SearchPlayersFor('PlayerID','!=',str(TargetPlayerID))
     LivingPlayers = SearchPlayersFor('Alive','==',"'Yes'")
     PossibleVoters = ShuffleList(ReturnOneListWithCommonItemsFromTwoLists(LivingPlayers,NotTargetPlayers))
     ActualVoters = []
-    DebugPrint("Going to see if the following players will vote 'yes': " + str(PossibleVoters))
+    #DebugPrint("Going to see if the following players will vote 'yes': " + str(PossibleVoters))
     Votes = 0
     for Player in PossibleVoters:
-        DebugPrint("Going to see if the following player will vote 'yes': " + str(Player))
+        #DebugPrint("Going to see if the following player will vote 'yes': " + str(Player))
         if DoesPlayer1VoteForPlayer2(Player,TargetPlayerID) == 'Yes':
             ActualVoters.append(Player)
             Votes += 1
-            DebugPrint("Player " + str(Player) + " will vote yes, bringing the total votes to " + str(Votes))
+            #DebugPrint("Player " + str(Player) + " will vote yes, bringing the total votes to " + str(Votes))
             if Votes >= NumberOfVotesRequiredToLynch():
                 DebugPrint("They're lynching player " + str(TargetPlayerID) + " and the people voting are " + str(ActualVoters))
                 return('Yes',ActualVoters)
@@ -726,29 +726,35 @@ def AssignNightActionsForEachPlayer():
     #If this is not an inkbombed night, assign team night killers
     if Night not in NightsOnWhichThereAreNoKills:
         if len(TeamsWithLivingPlayers) > 0:
+            #DebugPrint("The teams to be searched for Team Night Killers are " + str(TeamsWithLivingPlayers))
             for Team in TeamsWithLivingPlayers:
-                LivingActiveTeamKillersInTeam = ReturnOneListWithCommonItemsFromThreeLists(SearchPlayersFor('Alive','==',"'Yes'"),SearchPlayersFor('Team',"==",Team),SearchPlayersFor('TeamNightKill',"==",NightSearchVariable))
+                #DebugPrint("Team being searched for Team Night Killers: " + str(Team))
+                LivingActiveTeamKillersInTeam = ReturnOneListWithCommonItemsFromThreeLists(SearchPlayersFor('Alive','==',"'Yes'"),SearchPlayersFor('Team',"==",Team),SearchPlayersFor('TeamNightKill',"!=","'No'"))
                 if len(LivingActiveTeamKillersInTeam) > 0:
+                    #DebugPrint("Going through the Team Killers for Team " + str(Team) + ", those being " + str(LivingActiveTeamKillersInTeam))
                     ActiveTeamKillersWithNoOtherActions = []
                     for Player in LivingActiveTeamKillersInTeam:
-                        if len(ReturnPlayersNonTeamKillActions(Player,NightSearchVariable)) == 0:
-                            ActiveTeamKillersWithNoOtherActions.append(Player)
+                        TeamNightKillForThisPlayer = GetAttributeFromPlayer(Player,'TeamNightKill')
+                        if TeamNightKillForThisPlayer == "Yes" or TeamNightKillForThisPlayer == IsNumberOddOrEven(Night):
+                            #DebugPrint("The night is right.")
+                            if len(ReturnPlayersNonTeamKillActions(Player,NightSearchVariable)) == 0:
+                                ActiveTeamKillersWithNoOtherActions.append(Player)
                     SelectedTeamKiller = 0
                     if len(ActiveTeamKillersWithNoOtherActions) == 0:
                         SelectedTeamKiller = PickRandomItemFromList(LivingActiveTeamKillersInTeam)
                     else:
                         SelectedTeamKiller = PickRandomItemFromList(ActiveTeamKillersWithNoOtherActions)
                     if SelectedTeamKiller != 0:
-                        print("Team " + str(Team) + " has selected Player " + str(SelectedTeamKiller) + " as the Team Night Killer.")
+                        DebugPrint("Team " + str(Team) + " has selected Player " + str(SelectedTeamKiller) + " as the Team Night Killer.")
                         ReturnedPlayer, ReturnedAction, ReturnedAlternatives = PickNightActionForPlayer(SelectedTeamKiller,NightSearchVariable)
                         TonightsTeamKillers.append({'Player' : SelectedTeamKiller, 'AlternativeActions' : ReturnedAlternatives})
 
     #Go through every living player not in TeamKillers and assign them an action
     LivingPlayersNotTeamKilling = ReturnOneListWithCommonItemsFromTwoLists(SearchPlayersFor('Alive','==',"'Yes'"),SearchPlayersFor('PlayerID','not in',str(TonightsTeamKillers)))
     for Player in LivingPlayersNotTeamKilling:
-        print("Finding a night action for Player " + str(Player) + ".")
+        #print("Finding a night action for Player " + str(Player) + ".")
         ReturnedPlayer, ReturnedAction, ReturnedAlternatives = PickNightActionForPlayer(Player,NightSearchVariable)
-        print("Action returned is " + str(ReturnedAction) + ".")
+        #print("Action returned is " + str(ReturnedAction) + ".")
         if ReturnedAction == 'FriendlyNeighbour':
             TonightsFriendlyNeighbours.append({'Player' : ReturnedPlayer, 'AlternativeActions' : ReturnedAlternatives})
         elif ReturnedAction == 'Cop':
@@ -768,7 +774,7 @@ def AssignNightActionsForEachPlayer():
 
 def PickNightActionForPlayer(Player,NightSearchVariable):
     ThisPlayersPossibleNightActions = ReturnPlayersNonTeamKillActions(Player,NightSearchVariable)
-    DebugPrint("Player " + str(Player) + "'s possible night actions are " + str(ThisPlayersPossibleNightActions) +".")
+    #DebugPrint("Player " + str(Player) + "'s possible night actions are " + str(ThisPlayersPossibleNightActions) +".")
     ChosenAction = ""
     AlternativeActions = []
     if len(ThisPlayersPossibleNightActions) > 0: #If the player has possible actions
@@ -789,7 +795,7 @@ def PickNightActionForPlayer(Player,NightSearchVariable):
 def ReturnPlayersNonTeamKillActions(Player,NightSearchVariable):
     global Night
     NonTeamKillActions = []
-    print("Returning non team kill night actions for Player " + str(Player))
+    #print("Returning non team kill night actions for Player " + str(Player))
     PossibleActions = ['FriendlyNeighbour','Cop','Commuter','Doctor','RoleBlocker','BusDriver','Vigilante']
     for PossibleAction in PossibleActions:
         if not (PossibleAction == 'Vigilante' and Night in NightsOnWhichThereAreNoKills):
@@ -803,9 +809,9 @@ def ReturnPlayersNonTeamKillActions(Player,NightSearchVariable):
             ActionShotsValue = eval("GetAttributeFromPlayer(Player,'" + PossibleAction + "Shots')")
             if ActionShotsValue != 0:
                 ActionShotsIsAppropriate = "Yes"
-            DebugPrint("Night is " + IsNumberOddOrEven(Night) + ", ActionValue is " + ActionValue + ", ActionShotsValue is " + str(ActionShotsValue) +", Action is " + PossibleAction + ", ActionValueIsAppropriate = "+ ActionValueIsAppropriate+", ActionShotsValueIsAppropriate = " + ActionShotsIsAppropriate + ".")
+            #DebugPrint("Night is " + IsNumberOddOrEven(Night) + ", ActionValue is " + ActionValue + ", ActionShotsValue is " + str(ActionShotsValue) +", Action is " + PossibleAction + ", ActionValueIsAppropriate = "+ ActionValueIsAppropriate+", ActionShotsValueIsAppropriate = " + ActionShotsIsAppropriate + ".")
             if ActionShotsIsAppropriate == "Yes" and ActionValueIsAppropriate == "Yes":
-                DebugPrint("Adding the " + PossibleAction + " for Player " +str(Player))
+                #DebugPrint("Adding the " + PossibleAction + " for Player " +str(Player))
                 NonTeamKillActions.append(PossibleAction)
     return(NonTeamKillActions)
 
@@ -829,8 +835,9 @@ def SeeIfAnyOneMafiaTeamHasTheMajority():
     DebugPrint("Seeing if any one MafiaTeam out of Teams " + str(MafiaTeams) + " has " + str(Majority) + " votes.")
     for TeamNumber in MafiaTeams: #See if each scum team has the votes
         ListOfLivingPlayersInTeam = ReturnOneListWithCommonItemsFromTwoLists(SearchPlayersFor('Alive',"==","'Yes'"), SearchPlayersFor('Team',"==",TeamNumber))
-        DebugPrint("List of living players in team " + str(TeamNumber) +": " + str(ListOfLivingPlayersInTeam))
+        #DebugPrint("List of living players in team " + str(TeamNumber) +": " + str(ListOfLivingPlayersInTeam))
         if len(ListOfLivingPlayersInTeam) >= Majority:
+            DebugPrint("The mafia team " + str(TeamNumber) + " has a majority of votes. Game over.")
             return('Yes')
     return('No')
 
@@ -967,13 +974,13 @@ def NightRoutine():
     ProcessFriendlyNeighbourActions()
     ProcessTeamNightKillActions()
     ProcessVigilanteKillActions()
-    if Night not in NightsOnWhichThereAreNoKills:
+    if not Night in NightsOnWhichThereAreNoKills:
         DebugPrint("The night kills are not being skipped because this night is not in " + str(NightsOnWhichThereAreNoKills))
         for ActualNightKill in ActualNightKills:
-            DebugPrint("Player " + str(ActualNightKill['Killer']) + " is night killing " + str(ActualNightKill['Victim']))
+            #DebugPrint("Player " + str(ActualNightKill['Killer']) + " is night killing " + str(ActualNightKill['Victim']))
             KillPlayer(ActualNightKill['Killer'],ActualNightKill['Victim'],'Night')
     #else:
-        DebugPrint("The night kills are being skipped because this night is in " + str(NightsOnWhichThereAreNoKills))
+        #DebugPrint("The night kills are being skipped because this night is in " + str(NightsOnWhichThereAreNoKills))
 
 
 def ProcessDoctorActions():
@@ -1020,14 +1027,14 @@ def ProcessFriendlyNeighbourActions():
     global ThisTurnsFriendlyNeighbourActions
     global ThisNightsCommutings
     for FriendlyNeighbourAction in ThisTurnsFriendlyNeighbourActions:
-        DebugPrint("Processing Friendly Neighour: " + str(FriendlyNeighbourAction))
+        #DebugPrint("Processing Friendly Neighour: " + str(FriendlyNeighbourAction))
         ActualTarget = FindBusDrivingPairs(FriendlyNeighbourAction['Target'])
-        DebugPrint("The Friendly Neighbour Actual Target is " + str(ActualTarget))
+        #DebugPrint("The Friendly Neighbour Actual Target is " + str(ActualTarget))
         for Target in ActualTarget:
-            DebugPrint("adding a target!")
+            #DebugPrint("adding a target!")
             if Target not in ThisNightsCommutings:
                 FriendlyNeighbourResults.append({'Teller':FriendlyNeighbourAction['FriendlyNeighbour'],'Listener':Target,'IntendedListener':FriendlyNeighbourAction['Target'],'Revealed':'No'})
-    DebugPrint("After processing Friendly Neighbours, FriendlyNeighbourResults = " + str(FriendlyNeighbourResults))
+    #DebugPrint("After processing Friendly Neighbours, FriendlyNeighbourResults = " + str(FriendlyNeighbourResults))
 
 def ProcessTeamNightKillActions():
     global TeamNightKillActions
@@ -1055,7 +1062,7 @@ def FindBusDrivingPairs(PlayerID):
                 ReturnedPlayerIDs.append(BusDriving[0])
             else:
                 ReturnedPlayerIDs.append(PlayerID)
-    DebugPrint("Accounting for busdrivings (if any), the player actually targeted is " + str(ReturnedPlayerIDs))
+    #DebugPrint("Accounting for busdrivings (if any), the player actually targeted is " + str(ReturnedPlayerIDs))
     return(ReturnedPlayerIDs)
 
 
@@ -1114,7 +1121,7 @@ def ReceiveBusDrivingActions(TonightsBusDrivers):
                     if not (BusDrivenPlayer1 in ThisNightsCommutings or BusDrivenPlayer2 in ThisNightsCommutings):
                         DebugPrint("Tried to busdrive an active commuter, and so failed.")
                     #else:
-                        DebugPrint("On this night, Player " + str(BusDriver) + " is busdriving Player " + str(BusDrivenPlayer1) + " and Player " + str(BusDrivenPlayer2))
+                        DebugPrint("Player " + str(BusDriver) + " is busdriving Player " + str(BusDrivenPlayer1) + " and Player " + str(BusDrivenPlayer2))
                         BusDrivings.append([BusDrivenPlayer1,BusDrivenPlayer2])
 
 
@@ -1147,7 +1154,7 @@ def ReceiveTeamNightKillActions(TonightsTeamKillers):
                     DebugPrint("Player " + str(TeamKiller) + " tried to TeamKill a PGO and is now getting killed.")
                     PGOReaction(ActualTarget,TeamKiller)
             TeamNightKillActions.append({'Killer': TeamKiller,'Victim': Target})
-            DebugPrint("On this night, Player " + str(TeamKiller) + " is NightKilling Player " + str(Target) + " for team " + str(GetAttributeFromPlayer(TeamKiller,'Team')))
+            DebugPrint("Player " + str(TeamKiller) + " is NightKilling Player " + str(Target) + " for team " + str(GetAttributeFromPlayer(TeamKiller,'Team')))
 
 
 def ReceiveCommuterActions(TonightsCommuters):
@@ -1189,7 +1196,7 @@ def ReceiveVigilanteKillActions(TonightsVigilantes):
                     PGOReaction(ActualTarget,Vigilante)
             WriteAttributeToPlayer(Vigilante, "VigilanteShots", GetAttributeFromPlayer(Vigilante, "VigilanteShots")-1)
             VigilanteActions.append({'Killer': Vigilante,'Victim': Target})
-            DebugPrint("On this night, Player " + str(Vigilante) + " is NightKilling Player " + str(Target) + " as a Vigilante.")
+            DebugPrint("Player " + str(Vigilante) + " is NightKilling Player " + str(Target) + " as a Vigilante.")
 
 
 def ReceiveDoctorActions(TonightsDoctors):
@@ -1218,7 +1225,7 @@ def ReceiveDoctorActions(TonightsDoctors):
                 WriteAttributeToPlayer(Doctor, "DoctorShots", GetAttributeFromPlayer(Doctor, "DoctorShots")-1)
                 ThisNightsDoctorActions.append({'Doctor': Doctor, 'Target' : PlayerToBeDoctored})
                 PlayersTargetedByDoctors.append(PlayerToBeDoctored)
-                DebugPrint("On this night, Player " + str(Doctor) + " is Doctoring " + str(PlayerToBeDoctored))
+                DebugPrint("Player " + str(Doctor) + " is Doctoring " + str(PlayerToBeDoctored))
 
 
 def ReceiveFriendlyNeighbourActions(TonightsFriendlyNeighbours):
@@ -1253,7 +1260,7 @@ def ReceiveFriendlyNeighbourActions(TonightsFriendlyNeighbours):
             if PGOKilled == 'No':
                 WriteAttributeToPlayer(FriendlyNeighbour, "FriendlyNeighbourShots", GetAttributeFromPlayer(FriendlyNeighbour, "FriendlyNeighbourShots")-1)
                 ThisTurnsFriendlyNeighbourActions.append({'FriendlyNeighbour': FriendlyNeighbour, 'Target' : Target})
-                DebugPrint("On this night, Player " + str(FriendlyNeighbour) + " is being a Friendly Neighbour and informing Player " + str(Target))
+                DebugPrint("Player " + str(FriendlyNeighbour) + " is being a Friendly Neighbour and informing Player " + str(Target))
 
 
 def ReceiveCopActions(TonightsCops):
@@ -1280,7 +1287,7 @@ def ReceiveCopActions(TonightsCops):
             if PGOKilled == 'No':
                 WriteAttributeToPlayer(Cop, "CopShots", GetAttributeFromPlayer(Cop, "CopShots")-1)
                 ThisNightsInvestigationActions.append({'Cop': Cop, 'Target' : Target})
-                DebugPrint("On this night, Player " + str(Cop) + " is Investigating Player " + str(Target))
+                DebugPrint("Player " + str(Cop) + " is Investigating Player " + str(Target))
 
 
 def GetPlayersWhoCopWillNotInvestigate(Cop):
