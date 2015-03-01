@@ -710,56 +710,99 @@ def ShuffleList(InputList):
 
 
 def AssignNightActionsForEachPlayer():
-    global CurrentNightActions
     global Night
     global NightsOnWhichThereAreNoKills
-    CurrentNightActions = []
-    TeamsWithLivingPlayers = BuildListOfTeamNumbers()
+    TonightsTeamKillers = []
+    TonightsFriendlyNeighbours = []
+    TonightsCops = []
+    TonightsCommuters = []
+    TonightsDoctors = []
+    TonightsRoleBlockers = []
+    TonightsBusDrivers = []
+    TonightsVigilantes = []
+    TeamsWithLivingPlayers = BuildListOfTeamNumbers("")
     NightOddOrEven = IsNumberOddOrEven(Night)
-    TeamKillers = []
+
+    if NightOddOrEven == "Odd":
+        NightSearchVariable = "'No' or 'Even'"
+    else:
+        NightSearchVariable = "'No' or 'Odd'"
 
     #If this is not an inkbombed night, assign team night killers
     if Night not in NightsOnWhichThereAreNoKills:
         if len(TeamsWithLivingPlayers) > 0:
             for Team in TeamsWithLivingPlayers:
-                if NightOddOrEven == "Odd":
-                    TeamNightKillSearchVariable = "'No' or 'Even'"
-                else:
-                    TeamNightKillSearchVariable = "'No' or 'Odd'"
-                LivingActiveTeamKillersInTeam = ReturnOneListWithCommonItemsFromThreeLists(SearchPlayersFor('Alive','==',"'Yes'"),SearchPlayersFor('Team',"==",Team),SearchPlayersFor('TeamNightKill',"1=",TeamNightKillSearchVariable))
+                LivingActiveTeamKillersInTeam = ReturnOneListWithCommonItemsFromThreeLists(SearchPlayersFor('Alive','==',"'Yes'"),SearchPlayersFor('Team',"==",Team),SearchPlayersFor('TeamNightKill',"!=",NightSearchVariable))
                 if len(LivingActiveTeamKillersInTeam) > 0:
                     ActiveTeamKillersWithNoOtherActions = []
-                    for Player in LivingTeamKillersInTeam:
-                        if PlayerHasActionsBesidesTeamNightKill(Player,TeamNightKillSearchVariable) == "No":
+                    for Player in LivingActiveTeamKillersInTeam:
+                        if len(ReturnPlayersNonTeamKillActions(Player,NightSearchVariable)) == 0:
                             ActiveTeamKillersWithNoOtherActions.append(Player)
                     SelectedTeamKiller = 0
-                    if len(ActiveTeamKillersWithNoOtherActions) = 0:
+                    if len(ActiveTeamKillersWithNoOtherActions) == 0:
                         SelectedTeamKiller = PickRandomItemFromList(LivingActiveTeamKillersInTeam)
                     else:
-                        SelectedTeamKiller = PickRandomItemFromList(ActiveTeamKillersWithNoOtherActions
+                        SelectedTeamKiller = PickRandomItemFromList(ActiveTeamKillersWithNoOtherActions)
                     if SelectedTeamKiller != 0:
-                        CurrentNightActions.append({'Player' : SelectedTeamKiller, 'Action' : 'TeamNightKill')
-                        TeamKillers.append(SelectedTeamKiller)
+                        ReturnedPlayer, ReturnedAction, ReturnedAlternatives = PickNightActionForPlayer(SelectedTeamKiller,NightSearchVariable)
+                        TonightsTeamKillers.append({'Player' : SelectedTeamKiller, 'AlternativeActions' : ReturnedAlternatives})
 
     #Go through every living player not in TeamKillers and assign them an action
+    LivingPlayersNotTeamKilling = ReturnOneListWithCommonItemsFromTwoLists(SearchPlayersFor('Alive','==',"'Yes'"),SearchPlayersFor('PlayerID','not in',str(TonightsTeamKillers)))
+    for Player in LivingPlayersNotTeamKilling:
+        ReturnedPlayer, ReturnedAction, ReturnedAlternatives = PickNightActionForPlayer(Player,NightSearchVariable)
+        if ReturnedAction == 'FriendlyNeighbour':
+            TonightsFriendlyNeighbours.append({'Player' : ReturnedPlayer, 'AlternativeActions' : ReturnedAlternatives})
+        elif ReturnedAction == 'Cop':
+            TonightsCops.append({'Player' : ReturnedPlayer, 'AlternativeActions' : ReturnedAlternatives})
+        elif ReturnedAction == 'Commuter':
+            TonightsCommuters.append({'Player' : ReturnedPlayer, 'AlternativeActions' : ReturnedAlternatives})
+        elif ReturnedAction == 'Doctor':
+            TonightsDoctors.append({'Player' : ReturnedPlayer, 'AlternativeActions' : ReturnedAlternatives})
+        elif ReturnedAction == 'RoleBlocker':
+            TonightsRoleBlockers.append({'Player' : ReturnedPlayer, 'AlternativeActions' : ReturnedAlternatives})
+        elif ReturnedAction == 'BusDriver':
+            TonightsBusDrivers.append({'Player' : ReturnedPlayer, 'AlternativeActions' : ReturnedAlternatives})
+        elif ReturnedAction == 'Vigilante':
+            TonightsVigilantes.append({'Player' : ReturnedPlayer, 'AlternativeActions' : ReturnedAlternatives})
+    return(TonightsTeamKillers, TonightsFriendlyNeighbours, TonightsCops, TonightsCommuters, TonightsDoctors, TonightsRoleBlockers, TonightsBusDrivers, TonightsVigilantes)
 
-def PlayerHasActionsBesidesTeamNightKills(Player,NightActionSearchVariable):
-    AnyOtherActions = "No"
+
+def PickNightActionForPlayer(Player,NightSearchVariable):
+    ThisPlayersPossibleNightActions = ReturnPlayersNonTeamKillActions(Player,NightSearchVariable)
+    if len(ThisPlayersPossibleNightActions) > 0: #If the player has possible actions
+        ChosenAction = ""
+        PossibleActionsGivenNumberOfShots = []
+        AlternativeActions = []
+        for Action in ThisPlayersPossibleNightActions:
+            #Work out if the player would choose the action, given the number of shots available
+            NumberOfShots = eval("GetAttributeFromPlayer(Player,'" + Action + "Shots')")
+            if NumberOfShots < 0 or (NumberOfShots > 0 and (GetYesOrNoFromChangingProbability('Yes','Weak') == 'No')):
+                PossibleActionsGivenNumberOfShots.append(Action)
+        #Pick a random action from the available options
+        ChosenAction = PickRandomItemFromList(PossibleActionsGivenNumberOfShots)
+        for Action in PossibleActionsGivenNumberOfShots:
+            if Action != ChosenAction:
+                AlternativeActions.append(Action)
+    return(Player,ChosenAction,AlternativeActions)
+
+
+
+def ReturnPlayersNonTeamKillActions(Player,NightActionSearchVariable):
+    NonTeamKillActions = []
     PossibleActions = ['FriendlyNeighbour','Cop','Commuter','Doctor','RoleBlocker','BusDriver','Vigilante']
     for PossibleAction in PossibleActions:
-        if AnyOtherActions == "No":
-            if eval("GetAttributeFromPlayer(Player,'" + PossibleAction + "') != " + NightActionSearchVariable + " and GetAttributeFromPlayer(Player,'" + PossibleAction+ "') != 0") = True:
-                AnyOtherActions = "Yes"
-    return(AnyOtherActions)
-
-
+        if not (PossibleAction == 'Vigilante' and Night in NightsOnWhichThereAreNoKills):
+            if eval("GetAttributeFromPlayer(Player,'" + PossibleAction + "') != " + NightActionSearchVariable + " and GetAttributeFromPlayer(Player,'" + PossibleAction+ "Shots') != 0") == True:
+                NonTeamKillActions.append(PossibleAction)
+    return(NonTeamKillActions)
 
 
 def BuildListOfTeamNumbers(Alignment):   #Return a list of the numbers of the teams that have living players
     #Alignment = "Mafia", "Town", ""
     LivingPlayersInTeams = ReturnOneListWithCommonItemsFromTwoLists(SearchPlayersFor('Alive',"==","'Yes'"),SearchPlayersFor('Team',"!=",0))
     Teams = []
-    for Player in LivingPlayers: #Build a list of the teams
+    for Player in LivingPlayersInTeams: #Build a list of the teams
         IsTeamAppropriateToAddToList = "No"
         TeamNumberForThisPlayer = GetAttributeFromPlayer(Player,'Team')
         if (Alignment == "" or GetAttributeFromPlayer(Player,'Alignment') == Alignment) and TeamNumberForThisPlayer not in Teams:
@@ -898,14 +941,15 @@ def NightRoutine():
     ThisNightsInvestigationActions = []
     ThisTurnsFriendlyNeighbourActions = []
     ActualNightKills = []
-    ReceiveCommuterActions()
-    ReceiveRoleBlockingActions()
-    ReceiveBusDrivingActions()
-    ReceiveCopActions()
-    ReceiveDoctorActions()
-    ReceiveFriendlyNeighbourActions()
-    ReceiveTeamNightKillActions()
-    ReceiveVigilanteKillActions()
+    TonightsTeamKillers, TonightsFriendlyNeighbours, TonightsCops, TonightsCommuters, TonightsDoctors, TonightsRoleBlockers, TonightsBusDrivers, TonightsVigilantes = AssignNightActionsForEachPlayer()
+    ReceiveCommuterActions(TonightsCommuters)
+    ReceiveRoleBlockingActions(TonightsRoleBlockers)
+    ReceiveBusDrivingActions(TonightsBusDrivers)
+    ReceiveCopActions(TonightsCops)
+    ReceiveDoctorActions(TonightsDoctors)
+    ReceiveFriendlyNeighbourActions(TonightsFriendlyNeighbours)
+    ReceiveTeamNightKillActions(TonightsTeamKillers)
+    ReceiveVigilanteKillActions(TonightsVigilantes)
     ProcessCopActions()
     ProcessDoctorActions()
     ProcessFriendlyNeighbourActions()
@@ -1005,40 +1049,25 @@ def FindBusDrivingPairs(PlayerID):
     return(ReturnedPlayerIDs)
 
 
-def ReceiveRoleBlockingActions():
+def ReceiveRoleBlockingActions(TonightsRoleBlockers):
     global ThisNightsRoleBlockings
-    global Night
+    global NightsOnWhichThereAreNoKills
+    global ThisNightsCommutings
     ThisNightsRoleBlockings = []
-    LivingRoleBlockers = ReturnOneListWithCommonItemsFromTwoLists(SearchPlayersFor('Alive','==',"'Yes'"),SearchPlayersFor("RoleBlocker","!=","'No'"))
-    if LivingRoleBlockers != []: #If there are any roleblockers
-        for RoleBlocker in LivingRoleBlockers:
-            RoleBlockerActiveTonight = "No"
-            #See if this roleblocker is to be active on this particular night
-            RoleBlockerValueFromPlayerlist = GetAttributeFromPlayer(RoleBlocker,"RoleBlocker")
-            if RoleBlockerValueFromPlayerlist == "Yes":
-                RoleBlockerActiveTonight = "Yes"
-            elif RoleBlockerValueFromPlayerlist == IsNumberOddOrEven(Night):
-                RoleBlockerActiveTonight = "Yes"
-            if GetAttributeFromPlayer(RoleBlocker, "RoleBlockerShots") == 0:
-                RoleBlockerActiveTonight = "No"
-            if GetAttributeFromPlayer(RoleBlocker, "RoleBlockerShots") > 0:
-                if GetYesOrNoFromChangingProbability('Yes','Weak') == 'No':
-                    RoleBlockerActiveTonight = "No"
-            if RoleBlockerActiveTonight == "Yes":
-                if GetAttributeFromPlayer(RoleBlocker,'Alignment') == 'Mafia':
-                    PlayerToBeRoleBlocked = TryToPickTownPlayer(RoleBlocker,[])
-                else:
-                    PlayerToBeRoleBlocked = TryToPickMafiaPlayer(RoleBlocker,[])
-                if ThisNightsRoleBlockings != 0:
-                    global NightsOnWhichThereAreNoKills
-                    global ThisNightsCommutings
-                    if GetAttributeFromPlayer(PlayerToBeRoleBlocked,'ParanoidGunOwner') == 'Yes' and GetAttributeFromPlayer(PlayerToBeRoleBlocked,'ParanoidGunOwnerShots') != 0 and Night not in NightsOnWhichThereAreNoKills and PlayerToBeRoleBlocked not in ThisNightsCommutings:
-                        DebugPrint("Player " + str(RoleBlocker) + " tried to roleblock a PGO and is now getting killed.")
-                        PGOReaction(PlayerToBeRoleBlocked,RoleBlocker)
-                    else:
-                        WriteAttributeToPlayer(RoleBlocker, "RoleBlockerShots", GetAttributeFromPlayer(RoleBlocker, "RoleBlockerShots")-1)
-                        ThisNightsRoleBlockings.append({'RoleBlocker': RoleBlocker, 'Target' : PlayerToBeRoleBlocked})
-                        DebugPrint("Player " + str(RoleBlocker) + " is roleblocking " + str(PlayerToBeRoleBlocked))
+    for RoleBlockerEntry in TonightsRoleBlockers:
+        RoleBlocker = RoleBlockerEntry['Player']
+        if GetAttributeFromPlayer(RoleBlocker,'Alignment') == 'Mafia':
+            PlayerToBeRoleBlocked = TryToPickTownPlayer(RoleBlocker,[])
+        else:
+            PlayerToBeRoleBlocked = TryToPickMafiaPlayer(RoleBlocker,[])
+        if PlayerToBeRoleBlocked != 0:
+            if GetAttributeFromPlayer(PlayerToBeRoleBlocked,'ParanoidGunOwner') == 'Yes' and GetAttributeFromPlayer(PlayerToBeRoleBlocked,'ParanoidGunOwnerShots') != 0 and Night not in NightsOnWhichThereAreNoKills and PlayerToBeRoleBlocked not in ThisNightsCommutings:
+                DebugPrint("Player " + str(RoleBlocker) + " tried to roleblock a PGO and is now getting killed.")
+                PGOReaction(PlayerToBeRoleBlocked,RoleBlocker)
+            else:
+                WriteAttributeToPlayer(RoleBlocker, "RoleBlockerShots", GetAttributeFromPlayer(RoleBlocker, "RoleBlockerShots")-1)
+                ThisNightsRoleBlockings.append({'RoleBlocker': RoleBlocker, 'Target' : PlayerToBeRoleBlocked})
+                DebugPrint("Player " + str(RoleBlocker) + " is roleblocking " + str(PlayerToBeRoleBlocked))
 
 
 def PGOReaction(Killer,Victim):
@@ -1046,313 +1075,201 @@ def PGOReaction(Killer,Victim):
     WriteAttributeToPlayer(Killer, "ParanoidGunOwnerShots", GetAttributeFromPlayer(Killer, "ParanoidGunOwnerShots")-1)
     ActualNightKills.append({'Killer': Killer,'Victim': Victim})
 
-def ReceiveBusDrivingActions():
+def ReceiveBusDrivingActions(TonightsBusDrivers):
     global BusDrivings
-    BusDrivings = []
-    LivingBusDrivers = ReturnOneListWithCommonItemsFromTwoLists(SearchPlayersFor('Alive','==',"'Yes'"),SearchPlayersFor("BusDriver","!=","'No'"))
-    if LivingBusDrivers != []: #If there are any BusDrivers
-        for BusDriver in LivingBusDrivers:
-            BusDriverActiveTonight = "No"
-            #See if this BusDriver is to be active on this particular night
-            BusDriverValueFromPlayerlist = GetAttributeFromPlayer(BusDriver,"BusDriver")
-            if BusDriverValueFromPlayerlist == "Yes":
-                BusDriverActiveTonight = "Yes"
-            elif BusDriverValueFromPlayerlist == IsNumberOddOrEven(Night):
-                BusDriverActiveTonight = "Yes"
-            for RoleBlocking in ThisNightsRoleBlockings:
-                if BusDriver == RoleBlocking['Target']: #BusDriver is inactive if roleblocked
-                    BusDriverActiveTonight = "No"
-            if BusDriverActiveTonight == "Yes":
-                BusDrivenPlayer1 = TryToPickMafiaPlayer(BusDriver,[])
-                ExcludedPlayers = []
-                ExcludedPlayers.append(BusDrivenPlayer1)
-                BusDrivenPlayer2 = TryToPickTownPlayer(BusDriver,ExcludedPlayers)
-                if (BusDrivenPlayer1 != 0) and (BusDrivenPlayer2 != 0):
-                    if BusDrivenPlayer1 > BusDrivenPlayer2:
-                        InsertSlot1 = BusDrivenPlayer2
-                        InsertSlot2 = BusDrivenPlayer1
-                    else:
-                        InsertSlot1 = BusDrivenPlayer1
-                        InsertSlot2 = BusDrivenPlayer2
-                    if [InsertSlot1,InsertSlot2] not in BusDrivings:
-                        global NightOnWhichThereAreNoKills
-                        global ThisNightsCommutings
-                        if GetAttributeFromPlayer(BusDrivenPlayer1,'ParanoidGunOwner') == 'Yes' and GetAttributeFromPlayer(BusDrivenPlayer1,'ParanoidGunOwnerShots') != 0 and Night not in NightsOnWhichThereAreNoKills and BusDrivenPlayer1 not in ThisNightsCommutings:
-                            DebugPrint("Player " + str(BusDriver) + " tried to busdrive a PGO and is now getting killed.")
-                            PGOReaction(BusDrivenPlayer1,BusDriver)
-                        elif GetAttributeFromPlayer(BusDrivenPlayer2,'ParanoidGunOwner') == 'Yes' and GetAttributeFromPlayer(BusDrivenPlayer2,'ParanoidGunOwnerShots') != 0 and Night not in NightsOnWhichThereAreNoKills and BusDrivenPlayer2 not in ThisNightsCommutings:
-                            DebugPrint("Player " + str(BusDriver) + " tried to busdrive a PGO and is now getting killed.")
-                            PGOReaction(BusDrivenPlayer2,BusDriver)
-                        else:
-                            if not (BusDrivenPlayer1 in ThisNightsCommutings or BusDrivenPlayer2 in ThisNightsCommutings):
-                                DebugPrint("Tried to busdrive an active commuter, and so failed.")
-                            #else:
-                                DebugPrint("On this night, Player " + str(BusDriver) + " is busdriving Player " + str(BusDrivenPlayer1) + " and Player " + str(BusDrivenPlayer2))
-                                BusDrivings.append([BusDrivenPlayer1,BusDrivenPlayer2])
-
-
-def ReceiveTeamNightKillActions():
-    global TeamNightKillActions
-    TeamNightKillActions = []
-    TeamsStillAlive = BuildListOfTeamNumbers('Mafia') + BuildListOfTeamNumbers('Town')
-    for Team in TeamsStillAlive:
-        TeamKillPlayerPresent = "No"
-        TeamKillers = ReturnOneListWithCommonItemsFromThreeLists(SearchPlayersFor("Alive","==","'Yes'"),SearchPlayersFor("Team","==",Team),SearchPlayersFor("TeamNightKill","!=","'No'"))
-        if TeamKillers != []:
-            ChosenTeamKiller = PickRandomItemFromList(TeamKillers)
-            TeamKillerActiveTonight = "No"
-            #See if this TeamKiller is to be active on this particular night
-            TeamNightKillValueFromPlayerList = GetAttributeFromPlayer(ChosenTeamKiller,"TeamNightKill")
-            if TeamNightKillValueFromPlayerList == "Yes":
-                TeamKillerActiveTonight = "Yes"
-            elif TeamNightKillValueFromPlayerList == IsNumberOddOrEven(Night):
-                TeamKillerActiveTonight = "Yes"
-            for RoleBlocking in ThisNightsRoleBlockings:
-                if ChosenTeamKiller == RoleBlocking['Target']: #Teamkiller is inactive if roleblocked
-                    TeamKillerActiveTonight = "No"
-            if TeamKillerActiveTonight == "Yes":
-                if GetAttributeFromPlayer(ChosenTeamKiller,'Alignment') == "Mafia":
-                    Target = TryToPickTownPlayer(ChosenTeamKiller,[])
-                else:
-                    #First ensure you don't try to nightkill a person your teammate is investigating
-                    PlayersBeingInvestigatedOrDoctoredByTeammates = []
-                    global ThisNightsInvestigationActions
-                    global ThisNightsDoctorActions
-                    for Investigation in ThisNightsInvestigationActions:
-                        if Investigation['Cop'] in ReturnOneListWithCommonItemsFromTwoLists(SearchPlayersFor("Alive","==","'Yes'"),SearchPlayersFor("Team","==",Team)):
-                            PlayersBeingInvestigatedOrDoctoredByTeammates.append(Investigation['Target'])
-                    for Doctoring in ThisNightsDoctorActions:
-                        if Doctoring['Doctor'] in ReturnOneListWithCommonItemsFromTwoLists(SearchPlayersFor("Alive","==","'Yes'"),SearchPlayersFor("Team","==",Team)):
-                            PlayersBeingInvestigatedOrDoctoredByTeammates.append(Doctoring['Target'])
-                    Target = TryToPickMafiaPlayer(ChosenTeamKiller,PlayersBeingInvestigatedOrDoctoredByTeammates)
-                if Target != 0:
-                    ActualTargets = FindBusDrivingPairs(Target)
-                    for ActualTarget in ActualTargets:
-                        global NightsOnWhichThereAreNoKills
-                        global ThisNightsCommutings
-                        if GetAttributeFromPlayer(ActualTarget,'ParanoidGunOwner') == 'Yes' and GetAttributeFromPlayer(Target,'ParanoidGunOwnerShots') != 0 and Night not in NightsOnWhichThereAreNoKills and ActualTarget not in ThisNightsCommutings:
-                            DebugPrint("Player " + str(ChosenTeamKiller) + " tried to TeamKill a PGO and is now getting killed.")
-                            PGOReaction(ActualTarget,ChosenTeamKiller)
-                    TeamNightKillActions.append({'Killer': ChosenTeamKiller,'Victim': Target})
-                    DebugPrint("On this night, Player " + str(ChosenTeamKiller) + " is NightKilling Player " + str(Target) + " for team " + str(Team))
-
-
-def ReceiveCommuterActions():
+    global NightOnWhichThereAreNoKills
     global ThisNightsCommutings
-    global Night
-    ThisNightsCommutings = []
-    LivingCommuters = ReturnOneListWithCommonItemsFromTwoLists(SearchPlayersFor('Alive','==',"'Yes'"),SearchPlayersFor("Commuter","!=","'No'"))
-    if LivingCommuters != []: #If there are any living Commuters
-        for Commuter in LivingCommuters:
-            CommuterActiveTonight = "No"
-            #See if this Commuter is to be active on this particular night
-            CommuterValueFromPlayerlist = GetAttributeFromPlayer(Commuter,"Commuter")
-            if CommuterValueFromPlayerlist == "Yes":
-                CommuterActiveTonight = "Yes"
-            elif CommuterValueFromPlayerlist == IsNumberOddOrEven(Night):
-                CommuterActiveTonight = "Yes"
-            if GetAttributeFromPlayer(Commuter, "CommuterShots") == 0:
-                CommuterActiveTonight = "No"
-            if GetAttributeFromPlayer(Commuter, "CommuterShots") > 0:
-                if GetYesOrNoFromChangingProbability('Yes','Weak') == 'No':
-                    CommuterActiveTonight = "No"
-            if CommuterActiveTonight == "Yes":
-                WriteAttributeToPlayer(Commuter, "CommuterShots", GetAttributeFromPlayer(Commuter, "CommuterShots")-1)
-                ThisNightsCommutings.append(Commuter)
-                DebugPrint("Player " + str(Commuter) + " is commuting.")
-
-
-def ReceiveVigilanteKillActions():
-    global VigilanteActions
-    VigilanteActions = []
-    Vigilantes = ReturnOneListWithCommonItemsFromTwoLists(SearchPlayersFor("Alive","==","'Yes'"),SearchPlayersFor("Vigilante","!=","'No'"))
-    if Vigilantes != []:
-        for Vigilante in Vigilantes:
-            VigilanteActiveTonight = "No"
-            #See if this Vigilante is to be active on this particular night
-            VigilanteValueFromPlayerList = GetAttributeFromPlayer(Vigilante,"Vigilante")
-            if VigilanteValueFromPlayerList == "Yes":
-                VigilanteActiveTonight = "Yes"
-            elif VigilanteValueFromPlayerList == IsNumberOddOrEven(Night):
-                VigilanteActiveTonight = "Yes"
-            for RoleBlocking in ThisNightsRoleBlockings:
-                if Vigilante == RoleBlocking['Target']: #Vigilante is inactive if roleblocked
-                    VigilanteActiveTonight = "No"
-            if GetAttributeFromPlayer(Vigilante, "VigilanteShots") == 0:
-                VigilanteActiveTonight = "No"
-            if GetAttributeFromPlayer(Vigilante, "VigilanteShots") > 0:
-                if GetYesOrNoFromChangingProbability('Yes','Weak') == 'No':
-                    VigilanteActiveTonight = "No"
-            if VigilanteActiveTonight == "Yes":
-                if GetAttributeFromPlayer(Vigilante,'Alignment') == "Mafia":
-                    Target = TryToPickTownPlayer(Vigilante,[])
+    BusDrivings = []
+    for BusDriverEntry in TonightsBusDrivers:
+        BusDriver = BusDriverEntry['Player']
+        BusDrivenPlayer1 = TryToPickMafiaPlayer(BusDriver,[])
+        ExcludedPlayers = []
+        ExcludedPlayers.append(BusDrivenPlayer1)
+        BusDrivenPlayer2 = TryToPickTownPlayer(BusDriver,ExcludedPlayers)
+        if (BusDrivenPlayer1 != 0) and (BusDrivenPlayer2 != 0):
+            if BusDrivenPlayer1 > BusDrivenPlayer2:
+                InsertSlot1 = BusDrivenPlayer2
+                InsertSlot2 = BusDrivenPlayer1
+            else:
+                InsertSlot1 = BusDrivenPlayer1
+                InsertSlot2 = BusDrivenPlayer2
+            if [InsertSlot1,InsertSlot2] not in BusDrivings:
+                if GetAttributeFromPlayer(BusDrivenPlayer1,'ParanoidGunOwner') == 'Yes' and GetAttributeFromPlayer(BusDrivenPlayer1,'ParanoidGunOwnerShots') != 0 and Night not in NightsOnWhichThereAreNoKills and BusDrivenPlayer1 not in ThisNightsCommutings:
+                    DebugPrint("Player " + str(BusDriver) + " tried to busdrive a PGO and is now getting killed.")
+                    PGOReaction(BusDrivenPlayer1,BusDriver)
+                elif GetAttributeFromPlayer(BusDrivenPlayer2,'ParanoidGunOwner') == 'Yes' and GetAttributeFromPlayer(BusDrivenPlayer2,'ParanoidGunOwnerShots') != 0 and Night not in NightsOnWhichThereAreNoKills and BusDrivenPlayer2 not in ThisNightsCommutings:
+                    DebugPrint("Player " + str(BusDriver) + " tried to busdrive a PGO and is now getting killed.")
+                    PGOReaction(BusDrivenPlayer2,BusDriver)
                 else:
-                    PlayersBeingInvestigatedOrDoctoredByTeammates = []
-                    global ThisNightsInvestigationActions
-                    global ThisNightsDoctorActions
-                    if GetAttributeFromPlayer(Vigilante, 'Team') != 0:
-                        for Investigation in ThisNightsInvestigationActions:
-                            if Investigation['Cop'] in ReturnOneListWithCommonItemsFromTwoLists(SearchPlayersFor("Alive","==","'Yes'"),SearchPlayersFor("Team","==",Team)):
-                                PlayersBeingInvestigatedOrDoctoredByTeammates.append(Investigation['Target'])
-                        for Doctoring in ThisNightsDoctorActions:
-                            if Doctoring['Doctor'] in ReturnOneListWithCommonItemsFromTwoLists(SearchPlayersFor("Alive","==","'Yes'"),SearchPlayersFor("Team","==",Team)):
-                                PlayersBeingInvestigatedOrDoctoredByTeammates.append(Doctoring['Target'])
-                    Target = TryToPickMafiaPlayer(Vigilante,PlayersBeingInvestigatedOrDoctoredByTeammates)
-                if Target != 0:
-                    ActualTargets = FindBusDrivingPairs(Target)
-                    global NightsOnWhichThereAreNoKills
-                    global ThisNightsCommutings
-                    for ActualTarget in ActualTargets:
-                        if GetAttributeFromPlayer(ActualTarget,'ParanoidGunOwner') == 'Yes' and GetAttributeFromPlayer(Target,'ParanoidGunOwnerShots') != 0 and Night not in NightsOnWhichThereAreNoKills and ActualTarget not in ThisNightsCommutings:
-                            DebugPrint("Player " + str(Vigilante) + " tried to VigilanteKill a PGO and is now getting killed.")
-                            PGOReaction(ActualTarget,Vigilante)
-                    WriteAttributeToPlayer(Vigilante, "VigilanteShots", GetAttributeFromPlayer(Vigilante, "VigilanteShots")-1)
-                    VigilanteActions.append({'Killer': Vigilante,'Victim': Target})
-                    DebugPrint("On this night, Player " + str(Vigilante) + " is NightKilling Player " + str(Target) + " as a Vigilante.")
+                    if not (BusDrivenPlayer1 in ThisNightsCommutings or BusDrivenPlayer2 in ThisNightsCommutings):
+                        DebugPrint("Tried to busdrive an active commuter, and so failed.")
+                    #else:
+                        DebugPrint("On this night, Player " + str(BusDriver) + " is busdriving Player " + str(BusDrivenPlayer1) + " and Player " + str(BusDrivenPlayer2))
+                        BusDrivings.append([BusDrivenPlayer1,BusDrivenPlayer2])
 
 
-def ReceiveDoctorActions():
+def ReceiveTeamNightKillActions(TonightsTeamKillers):
+    global TeamNightKillActions
+    global ThisNightsInvestigationActions
+    global ThisNightsDoctorActions
+    TeamNightKillActions = []
+    for TeamKillerEntry in TonightsTeamKillers:
+        TeamKiller = TeamKillerEntry['Player']
+        if GetAttributeFromPlayer(TeamKiller,'Alignment') == "Mafia":
+            Target = TryToPickTownPlayer(TeamKiller,[])
+        else:
+            #First ensure you don't try to nightkill a person your teammate is investigating
+            PlayersBeingInvestigatedOrDoctoredByTeammates = []
+            for Investigation in ThisNightsInvestigationActions:
+                if Investigation['Cop'] in ReturnOneListWithCommonItemsFromTwoLists(SearchPlayersFor("Alive","==","'Yes'"),SearchPlayersFor("Team","==",Team)):
+                    PlayersBeingInvestigatedOrDoctoredByTeammates.append(Investigation['Target'])
+            for Doctoring in ThisNightsDoctorActions:
+                if Doctoring['Doctor'] in ReturnOneListWithCommonItemsFromTwoLists(SearchPlayersFor("Alive","==","'Yes'"),SearchPlayersFor("Team","==",Team)):
+                    PlayersBeingInvestigatedOrDoctoredByTeammates.append(Doctoring['Target'])
+            Target = TryToPickMafiaPlayer(TeamKiller,PlayersBeingInvestigatedOrDoctoredByTeammates)
+        if Target != 0:
+            ActualTargets = FindBusDrivingPairs(Target)
+            for ActualTarget in ActualTargets:
+                global NightsOnWhichThereAreNoKills
+                global ThisNightsCommutings
+                if GetAttributeFromPlayer(ActualTarget,'ParanoidGunOwner') == 'Yes' and GetAttributeFromPlayer(Target,'ParanoidGunOwnerShots') != 0 and Night not in NightsOnWhichThereAreNoKills and ActualTarget not in ThisNightsCommutings:
+                    DebugPrint("Player " + str(TeamKiller) + " tried to TeamKill a PGO and is now getting killed.")
+                    PGOReaction(ActualTarget,TeamKiller)
+            TeamNightKillActions.append({'Killer': TeamKiller,'Victim': Target})
+            DebugPrint("On this night, Player " + str(TeamKiller) + " is NightKilling Player " + str(Target) + " for team " + str(GetAttributeFromPlayer(TeamKiller,'Team')))
+
+
+def ReceiveCommuterActions(TonightsCommuters):
+    global ThisNightsCommutings
+    ThisNightsCommutings = []
+    for CommuterEntry in TonightsCommuters:
+        Commuter = CommuterEntry['Player']
+        WriteAttributeToPlayer(Commuter, "CommuterShots", GetAttributeFromPlayer(Commuter, "CommuterShots")-1)
+        ThisNightsCommutings.append(Commuter)
+        DebugPrint("Player " + str(Commuter) + " is commuting.")
+
+
+def ReceiveVigilanteKillActions(TonightsVigilantes):
+    global VigilanteActions
+    global ThisNightsInvestigationActions
+    global ThisNightsDoctorActions
+    VigilanteActions = []
+    for VigilanteEntry in TonightsVigilantes:
+        Vigilante = VigilanteEntry['Player']
+        if GetAttributeFromPlayer(Vigilante,'Alignment') == "Mafia":
+            Target = TryToPickTownPlayer(Vigilante,[])
+        else:
+            PlayersBeingInvestigatedOrDoctoredByTeammates = []
+            if GetAttributeFromPlayer(Vigilante, 'Team') != 0:
+                for Investigation in ThisNightsInvestigationActions:
+                    if Investigation['Cop'] in ReturnOneListWithCommonItemsFromTwoLists(SearchPlayersFor("Alive","==","'Yes'"),SearchPlayersFor("Team","==",Team)):
+                        PlayersBeingInvestigatedOrDoctoredByTeammates.append(Investigation['Target'])
+                for Doctoring in ThisNightsDoctorActions:
+                    if Doctoring['Doctor'] in ReturnOneListWithCommonItemsFromTwoLists(SearchPlayersFor("Alive","==","'Yes'"),SearchPlayersFor("Team","==",Team)):
+                        PlayersBeingInvestigatedOrDoctoredByTeammates.append(Doctoring['Target'])
+            Target = TryToPickMafiaPlayer(Vigilante,PlayersBeingInvestigatedOrDoctoredByTeammates)
+        if Target != 0:
+            ActualTargets = FindBusDrivingPairs(Target)
+            global NightsOnWhichThereAreNoKills
+            global ThisNightsCommutings
+            for ActualTarget in ActualTargets:
+                if GetAttributeFromPlayer(ActualTarget,'ParanoidGunOwner') == 'Yes' and GetAttributeFromPlayer(Target,'ParanoidGunOwnerShots') != 0 and Night not in NightsOnWhichThereAreNoKills and ActualTarget not in ThisNightsCommutings:
+                    DebugPrint("Player " + str(Vigilante) + " tried to VigilanteKill a PGO and is now getting killed.")
+                    PGOReaction(ActualTarget,Vigilante)
+            WriteAttributeToPlayer(Vigilante, "VigilanteShots", GetAttributeFromPlayer(Vigilante, "VigilanteShots")-1)
+            VigilanteActions.append({'Killer': Vigilante,'Victim': Target})
+            DebugPrint("On this night, Player " + str(Vigilante) + " is NightKilling Player " + str(Target) + " as a Vigilante.")
+
+
+def ReceiveDoctorActions(TonightsDoctors):
     global PlayersTargetedByDoctors
     global Night
     global ThisNightsDoctorActions
+    global NightsOnWhichThereAreNoKills
+    global ThisNightsCommutings
     ThisNightsDoctorActions = []
     PlayersTargetedByDoctors = []
-    LivingDoctors = ReturnOneListWithCommonItemsFromTwoLists(SearchPlayersFor('Alive','==',"'Yes'"),SearchPlayersFor("Doctor","!=","'No'"))
-    if LivingDoctors != []: #If there are any Doctors
-        for Doctor in LivingDoctors:
-            DoctorActiveTonight = "No"
-            #See if this Doctor is to be active on this particular night
-            DoctorValueFromPlayerList = GetAttributeFromPlayer(Doctor,"Doctor")
-            if DoctorValueFromPlayerList == "Yes":
-                DoctorActiveTonight = "Yes"
-            elif DoctorValueFromPlayerList == IsNumberOddOrEven(Night):
-                DoctorActiveTonight = "Yes"
-            for RoleBlocking in ThisNightsRoleBlockings:
-                if Doctor == RoleBlocking['Target']: #Doctor is inactive if roleblocked
-                    DoctorActiveTonight = "No"
-            if GetAttributeFromPlayer(Doctor, "DoctorShots") == 0:
-                DoctorActiveTonight = "No"
-            if GetAttributeFromPlayer(Doctor, "DoctorShots") > 0:
-                if GetYesOrNoFromChangingProbability('Yes','Weak') == 'No':
-                    DoctorActiveTonight = "No"
-            if DoctorActiveTonight == "Yes":
-                if GetAttributeFromPlayer(Doctor,'Alignment') == 'Mafia':
-                    PlayerToBeDoctored = TryToPickMafiaPlayer(Doctor,[])
-                else:
-                    PlayerToBeDoctored = TryToPickTownPlayer(Doctor,[])
-                if PlayerToBeDoctored != 0:
-                    PGOKilled = 'No'
-                    ActualTargets = FindBusDrivingPairs(PlayerToBeDoctored)
-                    global NightsOnWhichThereAreNoKills
-                    global ThisNightsCommutings
-                    for ActualTarget in ActualTargets:
-                        if GetAttributeFromPlayer(ActualTarget,'ParanoidGunOwner') == 'Yes' and GetAttributeFromPlayer(ActualTarget,'ParanoidGunOwnerShots') != 0 and Night not in NightsOnWhichThereAreNoKills and ActualTarget not in ThisNightsCommutings:
-                            DebugPrint("Player " + str(Doctor) + " tried to doctor a PGO and is now getting killed.")
-                            PGOReaction(ActualTarget,Doctor)
-                            PGOKilled = "Yes"
-                    if PGOKilled == 'No':
-                        WriteAttributeToPlayer(Doctor, "DoctorShots", GetAttributeFromPlayer(Doctor, "DoctorShots")-1)
-                        ThisNightsDoctorActions.append({'Doctor': Doctor, 'Target' : PlayerToBeDoctored})
-                        PlayersTargetedByDoctors.append(PlayerToBeDoctored)
-                        DebugPrint("On this night, Player " + str(Doctor) + " is Doctoring " + str(PlayerToBeDoctored))
+    for DoctorEntry in TonightsDoctors:
+        Doctor = DoctorEntry['Player']
+        if GetAttributeFromPlayer(Doctor,'Alignment') == 'Mafia':
+            PlayerToBeDoctored = TryToPickMafiaPlayer(Doctor,[])
+        else:
+            PlayerToBeDoctored = TryToPickTownPlayer(Doctor,[])
+        if PlayerToBeDoctored != 0:
+            PGOKilled = 'No'
+            ActualTargets = FindBusDrivingPairs(PlayerToBeDoctored)
+            for ActualTarget in ActualTargets:
+                if GetAttributeFromPlayer(ActualTarget,'ParanoidGunOwner') == 'Yes' and GetAttributeFromPlayer(ActualTarget,'ParanoidGunOwnerShots') != 0 and Night not in NightsOnWhichThereAreNoKills and ActualTarget not in ThisNightsCommutings:
+                    DebugPrint("Player " + str(Doctor) + " tried to doctor a PGO and is now getting killed.")
+                    PGOReaction(ActualTarget,Doctor)
+                    PGOKilled = "Yes"
+            if PGOKilled == 'No':
+                WriteAttributeToPlayer(Doctor, "DoctorShots", GetAttributeFromPlayer(Doctor, "DoctorShots")-1)
+                ThisNightsDoctorActions.append({'Doctor': Doctor, 'Target' : PlayerToBeDoctored})
+                PlayersTargetedByDoctors.append(PlayerToBeDoctored)
+                DebugPrint("On this night, Player " + str(Doctor) + " is Doctoring " + str(PlayerToBeDoctored))
 
 
-def ReceiveFriendlyNeighbourActions():
+def ReceiveFriendlyNeighbourActions(TonightsFriendlyNeighbours):
     global ThisTurnsFriendlyNeighbourActions
     global FriendlyNeighbourResults
+    global NightsOnWhichThereAreNoKills
+    global ThisNightsCommutings
     ThisTurnsFriendlyNeighbourActions = []
-    #Build a list of Friendly Neighbours who will be asked for night actions
-    FriendlyNeighbours = ReturnOneListWithCommonItemsFromTwoLists(SearchPlayersFor("Alive","==","'Yes'"),SearchPlayersFor("FriendlyNeighbour","!=","'No'"))
-    if FriendlyNeighbours != []:
-        for FriendlyNeighbour in FriendlyNeighbours:
-            WillNotTell = []
-            FriendlyNeighbourActiveTonight = "No"
-            #See if this FriendlyNeighbour is to be active on this particular night
-            FriendlyNeighbourValueFromPlayerList = GetAttributeFromPlayer(FriendlyNeighbour,"FriendlyNeighbour")
-            if FriendlyNeighbourValueFromPlayerList == "Yes":
-                FriendlyNeighbourActiveTonight = "Yes"
-            elif FriendlyNeighbourValueFromPlayerList == IsNumberOddOrEven(Night):
-                FriendlyNeighbourActiveTonight = "Yes"
-            for RoleBlocking in ThisNightsRoleBlockings:
-                if FriendlyNeighbour == RoleBlocking['Target']: #FriendlyNeighbour is inactive if roleblocked
-                    FriendlyNeighbourActiveTonight = "No"
-            if GetAttributeFromPlayer(FriendlyNeighbour, "FriendlyNeighbourShots") == 0:
-                FriendlyNeighbourActiveTonight = "No"
-            if GetAttributeFromPlayer(FriendlyNeighbour, "FriendlyNeighbourShots") > 0:
-                if GetYesOrNoFromChangingProbability('Yes','Weak') == 'No':
-                    FriendlyNeighbourActiveTonight = "No"
-            if FriendlyNeighbourActiveTonight == "Yes":
-                WillNotTell = []
-                #Build a list of people who this neighbour has previously targeted, or who is in their team.
-                for FriendlyNeighbourResult in FriendlyNeighbourResults:
-                    if (FriendlyNeighbourResult['Teller'] == FriendlyNeighbour):
-                        if FriendlyNeighbourResult['Revealed'] == 'Yes':
-                            WillNotTell.append(FriendlyNeighbourResult['Listener'])
-                        else:
-                            WillNotTell.append(FriendlyNeighbourResult['IntendedListener'])
-                FriendlyNeighbourTeam = GetAttributeFromPlayer(FriendlyNeighbour,'Team')
-                if FriendlyNeighbourTeam != 0:
-                    WillNotTell += SearchPlayersFor('Team','==',FriendlyNeighbourTeam)
-                    DebugPrint("Friendly Neighbour, player " + str(FriendlyNeighbour) + " is not going to tell " +str(WillNotTell))
-                Target = TryToPickTownPlayer(FriendlyNeighbour,WillNotTell)
-                if Target != 0:
-                    PGOKilled = 'No'
-                    ActualTargets = FindBusDrivingPairs(Target)
-                    global NightsOnWhichThereAreNoKills
-                    global ThisNightsCommutings
-                    for ActualTarget in ActualTargets:
-                        if GetAttributeFromPlayer(ActualTarget,'ParanoidGunOwner') == 'Yes' and GetAttributeFromPlayer(Target,'ParanoidGunOwnerShots') != 0 and Night not in NightsOnWhichThereAreNoKills and ActualTarget not in ThisNightsCommutings:
-                            DebugPrint("Player " + str(FriendlyNeighbour) + " tried to friendly neighbour a PGO and is now getting killed.")
-                            PGOReaction(ActualTarget,FriendlyNeighbour)
-                            PGOKilled = "Yes"
-                    if PGOKilled == 'No':
-                        WriteAttributeToPlayer(FriendlyNeighbour, "FriendlyNeighbourShots", GetAttributeFromPlayer(FriendlyNeighbour, "FriendlyNeighbourShots")-1)
-                        ThisTurnsFriendlyNeighbourActions.append({'FriendlyNeighbour': FriendlyNeighbour, 'Target' : Target})
-                        DebugPrint("On this night, Player " + str(FriendlyNeighbour) + " is being a Friendly Neighbour and informing Player " + str(Target))
+    for FriendlyNeighbourEntry in TonightsFriendlyNeighbours:
+        FriendlyNeighbour = FriendlyNeighbourEntry['Player']
+        WillNotTell = []
+        #Build a list of people who this neighbour has previously targeted, or who is in their team.
+        for FriendlyNeighbourResult in FriendlyNeighbourResults:
+            if (FriendlyNeighbourResult['Teller'] == FriendlyNeighbour):
+                if FriendlyNeighbourResult['Revealed'] == 'Yes':
+                    WillNotTell.append(FriendlyNeighbourResult['Listener'])
+                else:
+                    WillNotTell.append(FriendlyNeighbourResult['IntendedListener'])
+        FriendlyNeighbourTeam = GetAttributeFromPlayer(FriendlyNeighbour,'Team')
+        if FriendlyNeighbourTeam != 0:
+            WillNotTell += SearchPlayersFor('Team','==',FriendlyNeighbourTeam)
+            DebugPrint("Friendly Neighbour, player " + str(FriendlyNeighbour) + " is not going to tell " +str(WillNotTell))
+        Target = TryToPickTownPlayer(FriendlyNeighbour,WillNotTell)
+        if Target != 0:
+            PGOKilled = 'No'
+            ActualTargets = FindBusDrivingPairs(Target)
+            for ActualTarget in ActualTargets:
+                if GetAttributeFromPlayer(ActualTarget,'ParanoidGunOwner') == 'Yes' and GetAttributeFromPlayer(Target,'ParanoidGunOwnerShots') != 0 and Night not in NightsOnWhichThereAreNoKills and ActualTarget not in ThisNightsCommutings:
+                    DebugPrint("Player " + str(FriendlyNeighbour) + " tried to friendly neighbour a PGO and is now getting killed.")
+                    PGOReaction(ActualTarget,FriendlyNeighbour)
+                    PGOKilled = "Yes"
+            if PGOKilled == 'No':
+                WriteAttributeToPlayer(FriendlyNeighbour, "FriendlyNeighbourShots", GetAttributeFromPlayer(FriendlyNeighbour, "FriendlyNeighbourShots")-1)
+                ThisTurnsFriendlyNeighbourActions.append({'FriendlyNeighbour': FriendlyNeighbour, 'Target' : Target})
+                DebugPrint("On this night, Player " + str(FriendlyNeighbour) + " is being a Friendly Neighbour and informing Player " + str(Target))
 
 
-def ReceiveCopActions():
+def ReceiveCopActions(TonightsCops):
     global ThisNightsInvestigationActions
+    global NightsOnWhichThereAreNoKills
+    global ThisNightsCommutings
     ThisNightsInvestigationActions = []
     #Build a list of cops who will be asked for night actions
-    Cops = ReturnOneListWithCommonItemsFromTwoLists(SearchPlayersFor("Alive","==","'Yes'"),SearchPlayersFor("Cop","!=","'No'"))
-    if Cops != []:
-        for Cop in Cops:
-            CopActiveTonight = "No"
-            #See if this Cop is to be active on this particular night
-            CopValueFromPlayerList = GetAttributeFromPlayer(Cop,"Cop")
-            if CopValueFromPlayerList == "Yes":
-                CopActiveTonight = "Yes"
-            elif CopValueFromPlayerList == IsNumberOddOrEven(Night):
-                CopActiveTonight = "Yes"
-            for RoleBlocking in ThisNightsRoleBlockings:
-                if Cop == RoleBlocking['Target']: #Cop is inactive if roleblocked
-                    CopActiveTonight = "No"
-            if GetAttributeFromPlayer(Cop, "CopShots") == 0:
-                CopActiveTonight = "No"
-            if GetAttributeFromPlayer(Cop, "CopShots") > 0:
-                if GetYesOrNoFromChangingProbability('Yes','Weak') == 'No':
-                    CopActiveTonight = "No"
-            if CopActiveTonight == "Yes":
-                WillNotInvestigate = GetPlayersWhoCopWillNotInvestigate(Cop)
-                if GetAttributeFromPlayer(Cop,'Alignment') == "Mafia":
-                    Target = TryToPickTownPlayer(Cop,WillNotInvestigate)
-                else:
-                    Target = TryToPickMafiaPlayer(Cop,WillNotInvestigate)
-                if Target != 0:
-                    global NightsOnWhichThereAreNoKills
-                    global ThisNightsCommutings
-                    PGOKilled = 'No'
-                    ActualTargets = FindBusDrivingPairs(Target)
-                    for ActualTarget in ActualTargets:
-                        if GetAttributeFromPlayer(ActualTarget,'ParanoidGunOwner') == 'Yes' and GetAttributeFromPlayer(Target,'ParanoidGunOwnerShots') != 0 and Night not in NightsOnWhichThereAreNoKills and ActualTarget not in ThisNightsCommutings:
-                            DebugPrint("Player " + str(Cop) + " tried to investigate a PGO and is now getting killed.")
-                            PGOReaction(ActualTarget,Cop)
-                            PGOKilled = "Yes"
-                    if PGOKilled == 'No':
-                        WriteAttributeToPlayer(Cop, "CopShots", GetAttributeFromPlayer(Cop, "CopShots")-1)
-                        ThisNightsInvestigationActions.append({'Cop': Cop, 'Target' : Target})
-                        DebugPrint("On this night, Player " + str(Cop) + " is Investigating Player " + str(Target))
+    for CopEntry in TonightsCops:
+        Cop = CopEntry['Player']
+        WillNotInvestigate = GetPlayersWhoCopWillNotInvestigate(Cop)
+        if GetAttributeFromPlayer(Cop,'Alignment') == "Mafia":
+            Target = TryToPickTownPlayer(Cop,WillNotInvestigate)
+        else:
+            Target = TryToPickMafiaPlayer(Cop,WillNotInvestigate)
+        if Target != 0:
+            PGOKilled = 'No'
+            ActualTargets = FindBusDrivingPairs(Target)
+            for ActualTarget in ActualTargets:
+                if GetAttributeFromPlayer(ActualTarget,'ParanoidGunOwner') == 'Yes' and GetAttributeFromPlayer(Target,'ParanoidGunOwnerShots') != 0 and Night not in NightsOnWhichThereAreNoKills and ActualTarget not in ThisNightsCommutings:
+                    DebugPrint("Player " + str(Cop) + " tried to investigate a PGO and is now getting killed.")
+                    PGOReaction(ActualTarget,Cop)
+                    PGOKilled = "Yes"
+            if PGOKilled == 'No':
+                WriteAttributeToPlayer(Cop, "CopShots", GetAttributeFromPlayer(Cop, "CopShots")-1)
+                ThisNightsInvestigationActions.append({'Cop': Cop, 'Target' : Target})
+                DebugPrint("On this night, Player " + str(Cop) + " is Investigating Player " + str(Target))
 
 
 def GetPlayersWhoCopWillNotInvestigate(Cop):
