@@ -721,18 +721,13 @@ def AssignNightActionsForEachPlayer():
     TonightsBusDrivers = []
     TonightsVigilantes = []
     TeamsWithLivingPlayers = BuildListOfTeamNumbers("")
-    NightOddOrEven = IsNumberOddOrEven(Night)
-
-    if NightOddOrEven == "Odd":
-        NightSearchVariable = "'' or 'No' or 'Even'"
-    else:
-        NightSearchVariable = "'' or 'No' or 'Odd'"
+    NightSearchVariable = "'Yes' or '" + IsNumberOddOrEven(Night) + "'"
 
     #If this is not an inkbombed night, assign team night killers
     if Night not in NightsOnWhichThereAreNoKills:
         if len(TeamsWithLivingPlayers) > 0:
             for Team in TeamsWithLivingPlayers:
-                LivingActiveTeamKillersInTeam = ReturnOneListWithCommonItemsFromThreeLists(SearchPlayersFor('Alive','==',"'Yes'"),SearchPlayersFor('Team',"==",Team),SearchPlayersFor('TeamNightKill',"!=",NightSearchVariable))
+                LivingActiveTeamKillersInTeam = ReturnOneListWithCommonItemsFromThreeLists(SearchPlayersFor('Alive','==',"'Yes'"),SearchPlayersFor('Team',"==",Team),SearchPlayersFor('TeamNightKill',"==",NightSearchVariable))
                 if len(LivingActiveTeamKillersInTeam) > 0:
                     ActiveTeamKillersWithNoOtherActions = []
                     for Player in LivingActiveTeamKillersInTeam:
@@ -753,7 +748,7 @@ def AssignNightActionsForEachPlayer():
     for Player in LivingPlayersNotTeamKilling:
         print("Finding a night action for Player " + str(Player) + ".")
         ReturnedPlayer, ReturnedAction, ReturnedAlternatives = PickNightActionForPlayer(Player,NightSearchVariable)
-        print("Action returned is " + ReturnedAction + ".")
+        print("Action returned is " + str(ReturnedAction) + ".")
         if ReturnedAction == 'FriendlyNeighbour':
             TonightsFriendlyNeighbours.append({'Player' : ReturnedPlayer, 'AlternativeActions' : ReturnedAlternatives})
         elif ReturnedAction == 'Cop':
@@ -774,10 +769,10 @@ def AssignNightActionsForEachPlayer():
 def PickNightActionForPlayer(Player,NightSearchVariable):
     ThisPlayersPossibleNightActions = ReturnPlayersNonTeamKillActions(Player,NightSearchVariable)
     DebugPrint("Player " + str(Player) + "'s possible night actions are " + str(ThisPlayersPossibleNightActions) +".")
+    ChosenAction = ""
+    AlternativeActions = []
     if len(ThisPlayersPossibleNightActions) > 0: #If the player has possible actions
-        ChosenAction = ""
         PossibleActionsGivenNumberOfShots = []
-        AlternativeActions = []
         for Action in ThisPlayersPossibleNightActions:
             #Work out if the player would choose the action, given the number of shots available
             NumberOfShots = eval("GetAttributeFromPlayer(Player,'" + Action + "Shots')")
@@ -791,12 +786,26 @@ def PickNightActionForPlayer(Player,NightSearchVariable):
     return(Player,ChosenAction,AlternativeActions)
 
 
-def ReturnPlayersNonTeamKillActions(Player,NightActionSearchVariable):
+def ReturnPlayersNonTeamKillActions(Player,NightSearchVariable):
+    global Night
     NonTeamKillActions = []
+    print("Returning non team kill night actions for Player " + str(Player))
     PossibleActions = ['FriendlyNeighbour','Cop','Commuter','Doctor','RoleBlocker','BusDriver','Vigilante']
     for PossibleAction in PossibleActions:
         if not (PossibleAction == 'Vigilante' and Night in NightsOnWhichThereAreNoKills):
-            if eval("GetAttributeFromPlayer(Player,'" + PossibleAction + "') != " + NightActionSearchVariable + " and GetAttributeFromPlayer(Player,'" + PossibleAction+ "Shots') != 0") == True:
+            ActionValueIsAppropriate = "No"
+            ActionShotsIsAppropriate = "No"
+            ActionValue = eval("GetAttributeFromPlayer(Player,'" + PossibleAction + "')")
+            if ActionValue == "Yes":
+                ActionValueIsAppropriate = "Yes"
+            elif ActionValue == IsNumberOddOrEven(Night):
+                ActionValueIsAppropriate = "Yes"
+            ActionShotsValue = eval("GetAttributeFromPlayer(Player,'" + PossibleAction + "Shots')")
+            if ActionShotsValue != 0:
+                ActionShotsIsAppropriate = "Yes"
+            DebugPrint("Night is " + IsNumberOddOrEven(Night) + ", ActionValue is " + ActionValue + ", ActionShotsValue is " + str(ActionShotsValue) +", Action is " + PossibleAction + ", ActionValueIsAppropriate = "+ ActionValueIsAppropriate+", ActionShotsValueIsAppropriate = " + ActionShotsIsAppropriate + ".")
+            if ActionShotsIsAppropriate == "Yes" and ActionValueIsAppropriate == "Yes":
+                DebugPrint("Adding the " + PossibleAction + " for Player " +str(Player))
                 NonTeamKillActions.append(PossibleAction)
     return(NonTeamKillActions)
 
