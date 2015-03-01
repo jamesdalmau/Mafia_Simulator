@@ -221,14 +221,15 @@ def TryToLynch():
 
 
     #If there's no mafia been revealed this day
+    DebugPrint ("The current candidates for the lynch are " + str(Candidates))
     while len(Candidates) > 0 and PlayerWhoWillBeLynched == 0:  # While there are still candidates and no one has been voted for
-        DebugPrint ("The current candidates for the lynch are " + str(Candidates))
         CandidatePickedFromHat = PickNameFromHatForLynch(Candidates)
-        DebugPrint ("Going to see if there are enough votes for " + str(CandidatePickedFromHat))
+        #DebugPrint ("Going to see if there are enough votes for " + str(CandidatePickedFromHat))
         GetsEnoughVotes, ActualVoters = WillGetEnoughLynchVotes(CandidatePickedFromHat)
         if GetsEnoughVotes == "Yes":    # See if this candidate gets enough votes
             PlayerWhoWillBeLynched = CandidatePickedFromHat
         else:
+            DebugPrint ("The players couldn't get enough votes to lynch " + str(CandidatePickedFromHat))
             Candidates.remove(CandidatePickedFromHat)   # If there aren't enough votes for the candidate, knock the candidate off the list
     if PlayerWhoWillBeLynched != 0:
         KillPlayer(ActualVoters,PlayerWhoWillBeLynched,"Lynch")
@@ -896,8 +897,8 @@ def SimulateSingleGame():
     InitiateSingleGameVariables()
     global IndexList
     global PlayerList
-    DebugPrint("PlayerList = " + str(PlayerList))
-    DebugPrint("IndexList = " + str(IndexList))
+    #DebugPrint("PlayerList = " + str(PlayerList))
+    #DebugPrint("IndexList = " + str(IndexList))
 
     global DaysThatDoNotHappen
     global Day
@@ -975,12 +976,12 @@ def NightRoutine():
     ProcessTeamNightKillActions()
     ProcessVigilanteKillActions()
     if not Night in NightsOnWhichThereAreNoKills:
-        DebugPrint("The night kills are not being skipped because this night is not in " + str(NightsOnWhichThereAreNoKills))
+        #DebugPrint("The night kills are not being skipped because this night is not in " + str(NightsOnWhichThereAreNoKills))
         for ActualNightKill in ActualNightKills:
             #DebugPrint("Player " + str(ActualNightKill['Killer']) + " is night killing " + str(ActualNightKill['Victim']))
             KillPlayer(ActualNightKill['Killer'],ActualNightKill['Victim'],'Night')
-    #else:
-        #DebugPrint("The night kills are being skipped because this night is in " + str(NightsOnWhichThereAreNoKills))
+    else:
+        DebugPrint("The night kills are being skipped because this night is in " + str(NightsOnWhichThereAreNoKills))
 
 
 def ProcessDoctorActions():
@@ -1336,10 +1337,10 @@ TownPunishRewardMultiplier = min((0.87159763313609 + (0.0032248520710059 * Numbe
 MafiaStartingNamesInHat = int(max((551.73668639053 - (1.9852071005917 * NumberOfPlayers)),500))
 TownStartingNamesInHat = int(min((474.31656804734 + (0.92603550295856 * NumberOfPlayers)),500))
 
-print("MafiaPunishRewardMultiplier = " +str(MafiaPunishRewardMultiplier))
-print("TownPunishRewardMultiplier = " +str(TownPunishRewardMultiplier))
-print("MafiaStartingNamesInHat = " +str(MafiaStartingNamesInHat))
-print("TownStartingNamesInHat = " +str(TownStartingNamesInHat))
+#print("MafiaPunishRewardMultiplier = " +str(MafiaPunishRewardMultiplier))
+#print("TownPunishRewardMultiplier = " +str(TownPunishRewardMultiplier))
+#print("MafiaStartingNamesInHat = " +str(MafiaStartingNamesInHat))
+#print("TownStartingNamesInHat = " +str(TownStartingNamesInHat))
 
 
 GlobalPlayerList = CreatePlayerList()
@@ -1352,7 +1353,7 @@ ResultsFile.write('Ending Day,Winning Team\n')
 i=0
 TownVictories = 0
 MafiaVictories = 0
-while i<2:
+while i<10:
     EndingTime, EndingTeam = SimulateSingleGame()
     ResultsFile.write(EndingTime + "," + EndingTeam + "\n")
     if EndingTeam == "Town":
