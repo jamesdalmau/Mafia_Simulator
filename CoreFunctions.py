@@ -490,7 +490,7 @@ def TryToPickMafiaPlayer(PlayerWhoIsChoosing,PlayersNotEligible):
                                 NumberOfNamesFromPlayerList = int(NumberOfNamesFromPlayerList / 2)
                             elif Investigation['Alignment'] == 'Mafia':
                                 NumberOfNamesFromPlayerList = int(NumberOfNamesFromPlayerList * 3)
-                        elif FriendlyNeighbourResult['Revealed'] == 'Yes':
+                        elif Investigation['Revealed'] == 'Yes':
                             if Investigation['Alignment'] == 'Town':
                                 NumberOfNamesFromPlayerList = int(NumberOfNamesFromPlayerList / 2.5)
                             elif Investigation['Alignment'] == 'Mafia':

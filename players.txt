@@ -34,3 +34,6 @@ Alignment="Town"
 PlayerID=9
 Alignment="Town"
 ***
+PlayerID=10
+Alignment="Town"
+***
