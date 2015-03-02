@@ -1055,7 +1055,7 @@ def FindBusDrivingPairs(PlayerID):
     if BusDrivings == []:
         ReturnedPlayerIDs.append(PlayerID)
     else:
-        DebugPrint("There's a busdriving happening.")
+        #DebugPrint("There's a busdriving happening.")
         for BusDriving in BusDrivings:
             if BusDriving[0] == PlayerID:
                 ReturnedPlayerIDs.append(BusDriving[1])
