@@ -20,6 +20,7 @@ RoleBlockerShots=-1
 ***
 PlayerID=4
 Alignment='Mafia'
+LynchResistant=1
 Team=1
 TeamNightKill='Yes'
 ***

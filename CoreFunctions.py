@@ -138,6 +138,7 @@ def ReturnBlankPlayer(PlayerID):
     PlayerToReturn['DeputyVigilante'] = 'No'        # "Yes" or "No"
     PlayerToReturn['NightKillResistant'] = 0        # -1 (for invulnerable), 0 (for normal), otherwise X-shot
     PlayerToReturn['LynchResistant'] = 0            # -1 (for invulnerable), 0 (for normal), otherwise X-shot
+    PlayerToReturn['Labrador'] = -1            # Should only be >0 for Mafia
     return(PlayerToReturn)
 
 
@@ -600,12 +601,12 @@ def DoesPlayer1VoteForPlayer2(Player1,Player2):
         # Test to see if the vote will be nullified because of teams
         if (Player1Team != 0) and (Player1Team == GetAttributeFromPlayer(Player2,'Team')):
             if Player1Alignment == 'Mafia':
-                if GetAttributeFromPlayer(Player2,'InkBomb') == 'Yes':
-                    Effect = 'No'
-                    EffectStrength = 'Weak'
-                else:
+                if GetAttributeFromPlayer(Player2,'InkBomb') != 'No':
                     Effect = 'No'
                     EffectStrength = 'Strong'
+                else:
+                    Effect = 'No'
+                    EffectStrength = 'Weak'
             elif Player1Team == 'Town':
                 Effect = 'No'
                 EffectStrength = 'Definite'
@@ -1404,13 +1405,13 @@ GlobalPlayerList = CreatePlayerList()
 global IndexList
 
 
-PrintDebugLines = 1
+PrintDebugLines = 0
 ResultsFile = open('results.txt','w')
 ResultsFile.write('Ending Day,Winning Team\n')
 i=0
 TownVictories = 0
 MafiaVictories = 0
-while i<10:
+while i<200:
     EndingTime, EndingTeam = SimulateSingleGame()
     ResultsFile.write(EndingTime + "," + EndingTeam + "\n")
     if EndingTeam == "Town":
