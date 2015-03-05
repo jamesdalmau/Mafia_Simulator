@@ -11,6 +11,8 @@ def InitiateSingleGameVariables(): # Set up variables to run a single game
     global PlayerList
     global GlobalPlayerList
     PlayerList = copy.deepcopy(GlobalPlayerList)  # This creates a fresh copy of the player list, for use in this specific game
+    global MafiaRevealedByLynchedCop
+    MafiaRevealedByLynchedCop = []
     global Day
     Day = 0
     global Night
@@ -256,11 +258,23 @@ def KillPlayer(Killer,Victim,KillType):
     if ResistancesOvercome == "Yes": #Proceed if resistances are overcome
         KillBecomesConvert = "No"   #Check whether kill fails because player is Judas or Saulus
         if GetAttributeFromPlayer(Victim,'Judas') == 'Yes' and GetAttributeFromPlayer(Victim,'Alignment') == 'Town': #If Player is a Judas
+            LivingMafiaTeamKillers = ReturnOneListWithCommonItemsFromFourLists(SearchPlayersFor('Alive','==',"'Yes'"),SearchPlayersFor('Alignment','==',"'Mafia'"),SearchPlayersFor('Team','!=',"0"),SearchPlayersFor('TeamNightKill','!=',"'No'"))
+            if len(LivingMafiaTeamKillers) > 0:
+                RandomMafiaPlayerToFollow = PickRandomItemFromList(LivingMafiaTeamKillers)
+                NewTeam = GetAttributeFromPlayer(RandomMafiaPlayerToFollow,'Team')
+                NewTeamKill = GetAttributeFromPlayer(RandomMafiaPlayerToFollow,'TeamNightKill')
+            else:
+                NewTeam = 0
+                NewTeamKill = 'No'
+            WriteAttributeToPlayer(Victim,'Team',NewTeam)
+            WriteAttributeToPlayer(Victim,'TeamNightKill',NewTeamKill)
             WriteAttributeToPlayer(Victim,'Alignment','Mafia')
             KillBecomesConvert = "Yes"
-            DebugPrint("Player was a Judas! Player is now Mafia.")
+            DebugPrint("Player was a Judas! Player is now Mafia. They are on team " + str(NewTeam) + " and their NightKill is '" + NewTeamKill +"'")
         elif GetAttributeFromPlayer(Victim,'Saulus') == 'Yes' and GetAttributeFromPlayer(Victim,'Alignment') == 'Mafia': #If Player is a Saulus
             WriteAttributeToPlayer(Victim,'Alignment','Town')
+            WriteAttributeToPlayer(Victim,'Team',0)
+            WriteAttributeToPlayer(Victim,'TeamNightKill',0)
             KillBecomesConvert = "Yes"
             DebugPrint("Player was a Saulus! Player is now Town.")
         if KillBecomesConvert == "No": #Proceed if kill wasn't converted
@@ -269,6 +283,11 @@ def KillPlayer(Killer,Victim,KillType):
                 TestForDeputies(Victim)
                 BelovedPrincess = GetAttributeFromPlayer(Victim,'BelovedPrincess')
                 InkBomb = GetAttributeFromPlayer(Victim,'InkBomb')
+                Cop = GetAttributeFromPlayer(Victim,'Cop')
+                Alignment = GetAttributeFromPlayer(Victim,'Alignment')
+                if Cop != 'No' and Alignment == 'Town' and KillType == 'Lynch':
+                    DebugPrint("Player " + str(Victim) + " was a Town Cop, seeing if they have any investigations to reveal before being lynched.")
+                    ConsiderRevealingInvestigations(Victim)
                 if BelovedPrincess == 'Either' or BelovedPrincess == KillType: # If player is a Beloved Princess
                     DebugPrint("Player " + str(Victim) + " was a Beloved Princess! Day " + str(Day + 1) + " will be skipped.")
                     global DaysThatDoNotHappen
@@ -345,8 +364,10 @@ def PunishAndRewardVotersAfterLynch(Voters,LynchedPlayer):
 
 def PickNameFromHatForLynch(PlayersToGoInHat):
     Hat = []
+    #DebugPrint("PlayersToGoInHat = " + str(PlayersToGoInHat))
     for Player in PlayersToGoInHat:
         i = 0
+        #DebugPrint("Player = " + str(Player))
         while i < int(GetAttributeFromPlayer(Player,'NumberOfNamesInHat')):
             Hat.append(Player)
             i +=1
@@ -713,6 +734,7 @@ def ShuffleList(InputList):
 def AssignNightActionsForEachPlayer():
     global Night
     global NightsOnWhichThereAreNoKills
+    TonightsTeamKillerActions = []
     TonightsTeamKillers = []
     TonightsFriendlyNeighbours = []
     TonightsCops = []
@@ -748,8 +770,8 @@ def AssignNightActionsForEachPlayer():
                     if SelectedTeamKiller != 0:
                         DebugPrint("Team " + str(Team) + " has selected Player " + str(SelectedTeamKiller) + " as the Team Night Killer.")
                         ReturnedPlayer, ReturnedAction, ReturnedAlternatives = PickNightActionForPlayer(SelectedTeamKiller,NightSearchVariable)
-                        TonightsTeamKillers.append({'Player' : SelectedTeamKiller, 'AlternativeActions' : ReturnedAlternatives})
-
+                        TonightsTeamKillerActions.append({'Player' : SelectedTeamKiller, 'AlternativeActions' : ReturnedAlternatives})
+                        TonightsTeamKillers.append(SelectedTeamKiller)
     #Go through every living player not in TeamKillers and assign them an action
     LivingPlayersNotTeamKilling = ReturnOneListWithCommonItemsFromTwoLists(SearchPlayersFor('Alive','==',"'Yes'"),SearchPlayersFor('PlayerID','not in',str(TonightsTeamKillers)))
     for Player in LivingPlayersNotTeamKilling:
@@ -770,7 +792,7 @@ def AssignNightActionsForEachPlayer():
             TonightsBusDrivers.append({'Player' : ReturnedPlayer, 'AlternativeActions' : ReturnedAlternatives})
         elif ReturnedAction == 'Vigilante':
             TonightsVigilantes.append({'Player' : ReturnedPlayer, 'AlternativeActions' : ReturnedAlternatives})
-    return(TonightsTeamKillers, TonightsFriendlyNeighbours, TonightsCops, TonightsCommuters, TonightsDoctors, TonightsRoleBlockers, TonightsBusDrivers, TonightsVigilantes)
+    return(TonightsTeamKillerActions, TonightsFriendlyNeighbours, TonightsCops, TonightsCommuters, TonightsDoctors, TonightsRoleBlockers, TonightsBusDrivers, TonightsVigilantes)
 
 
 def PickNightActionForPlayer(Player,NightSearchVariable):
@@ -869,29 +891,46 @@ def ConsiderRevealingFriendlyNeighbours():
                 DebugPrint("Player " + str(Result['Listener']) + " is revealing that Player " + str(Result ['Teller']) + " is a Friendly Neighbour.")
                 Result['Revealed'] = 'Yes'
 
-def ConsiderRevealingInvestigations():
+def ConsiderRevealingInvestigations(Cop):
     global InvestigationResults
     global MafiaRevealedToday
+    global MafiaRevealedByLynchedCop
     MafiaRevealedToday = []
     for Result in InvestigationResults:
-        WillReveal = 'No'
-        if Result['Revealed'] == 'No':
-            if GetAttributeFromPlayer(Result['Cop'],'Alive') == "Yes" and GetAttributeFromPlayer(Result['Cop'],'Alignment') == "Town":
-                if Result['Alignment'] == 'Mafia' and GetAttributeFromPlayer(Result['Cop'],'Alignment') == "Town":
-                    WillReveal = GetYesOrNoFromChangingProbability('Yes','Strong')
-                elif Result['Alignment'] != 'Mafia' and GetAttributeFromPlayer(Result['Cop'],'Alignment') == "Mafia":
-                    WillReveal = GetYesOrNoFromChangingProbability('No','Strong')
-                else:
-                    WillReveal = GetYesOrNoFromChangingProbability('No','Weak')
-                if WillReveal == 'Yes':
-                    Result['Revealed'] = "Yes"
-                    WriteAttributeToPlayer(Result['Cop'],'NumberOfNamesInHat',50)
-                    if Result['Alignment'] == "Town":
-                        WriteAttributeToPlayer(Result['Target'],'NumberOfNamesInHat',50)
-                    if Result['Alignment'] == "Mafia":
-                        WriteAttributeToPlayer(Result['Target'],'NumberOfNamesInHat',1500)
-                        MafiaRevealedToday.append(Result['Target'])
-                    DebugPrint("Player " + str(Result['Cop']) + " just revealed that they investigated Player " + str(Result['Target']) + " and found that they are " + str(Result['Alignment']))
+        if Cop == 0:
+            WillReveal = 'No'
+            if Result['Revealed'] == 'No':
+                if GetAttributeFromPlayer(Result['Cop'],'Alive') == "Yes" and GetAttributeFromPlayer(Result['Cop'],'Alignment') == "Town":
+                    if Result['Alignment'] == 'Mafia' and GetAttributeFromPlayer(Result['Cop'],'Alignment') == "Town":
+                        WillReveal = GetYesOrNoFromChangingProbability('Yes','Strong')
+                    elif Result['Alignment'] != 'Mafia' and GetAttributeFromPlayer(Result['Cop'],'Alignment') == "Mafia":
+                        WillReveal = GetYesOrNoFromChangingProbability('No','Strong')
+                    else:
+                        WillReveal = GetYesOrNoFromChangingProbability('No','Weak')
+                    if WillReveal == 'Yes':
+                        Result['Revealed'] = "Yes"
+                        WriteAttributeToPlayer(Result['Cop'],'NumberOfNamesInHat',50)
+                        if Result['Alignment'] == "Town":
+                            WriteAttributeToPlayer(Result['Target'],'NumberOfNamesInHat',50)
+                        if Result['Alignment'] == "Mafia":
+                            WriteAttributeToPlayer(Result['Target'],'NumberOfNamesInHat',1500)
+                            MafiaRevealedToday.append(Result['Target'])
+                        DebugPrint("Player " + str(Result['Cop']) + " just revealed that they investigated Player " + str(Result['Target']) + " and found that they are " + str(Result['Alignment']))
+        else:   #If this is a reveal being done on a cop bieng lynched
+            if Result['Cop'] == Cop and Result['Revealed'] == 'No' and GetAttributeFromPlayer(Cop,'Alignment') == 'Town':
+                Result['Revealed'] = "Yes"
+                WriteAttributeToPlayer(Result['Cop'],'NumberOfNamesInHat',50)
+                if Result['Alignment'] == "Town":
+                    WriteAttributeToPlayer(Result['Target'],'NumberOfNamesInHat',50)
+                if Result['Alignment'] == "Mafia":
+                    WriteAttributeToPlayer(Result['Target'],'NumberOfNamesInHat',1500)
+                    MafiaRevealedByLynchedCop.append(Result['Target'])
+                DebugPrint("Before being lynched, player " + str(Result['Cop']) + " just revealed that they investigated Player " + str(Result['Target']) + " and found that they are " + str(Result['Alignment']))
+    if Cop == 0:
+        #Add in the ones revealed by the cop on being lynched yesterday, and then zero that variable.
+        for Reveal in MafiaRevealedByLynchedCop:
+            MafiaRevealedToday.append(Reveal)
+        MafiaRevealedByLynchedCop = []
 
 def SimulateSingleGame():
     InitiateSingleGameVariables()
@@ -913,7 +952,7 @@ def SimulateSingleGame():
         DebugPrint(" ")
         DebugPrint("Day " + str(Day))
         if not Day in DaysThatDoNotHappen:
-            ConsiderRevealingInvestigations()
+            ConsiderRevealingInvestigations(0)
             ConsiderRevealingFriendlyNeighbours()
             TryToLynch()
         CheckForVictory()
@@ -961,14 +1000,14 @@ def NightRoutine():
     ThisNightsInvestigationActions = []
     ThisTurnsFriendlyNeighbourActions = []
     ActualNightKills = []
-    TonightsTeamKillers, TonightsFriendlyNeighbours, TonightsCops, TonightsCommuters, TonightsDoctors, TonightsRoleBlockers, TonightsBusDrivers, TonightsVigilantes = AssignNightActionsForEachPlayer()
+    TonightsTeamKillerActions, TonightsFriendlyNeighbours, TonightsCops, TonightsCommuters, TonightsDoctors, TonightsRoleBlockers, TonightsBusDrivers, TonightsVigilantes = AssignNightActionsForEachPlayer()
     ReceiveCommuterActions(TonightsCommuters)
     ReceiveRoleBlockingActions(TonightsRoleBlockers)
     ReceiveBusDrivingActions(TonightsBusDrivers)
     ReceiveCopActions(TonightsCops)
     ReceiveDoctorActions(TonightsDoctors)
     ReceiveFriendlyNeighbourActions(TonightsFriendlyNeighbours)
-    ReceiveTeamNightKillActions(TonightsTeamKillers)
+    ReceiveTeamNightKillActions(TonightsTeamKillerActions)
     ReceiveVigilanteKillActions(TonightsVigilantes)
     ProcessCopActions()
     ProcessDoctorActions()
@@ -1057,10 +1096,10 @@ def FindBusDrivingPairs(PlayerID):
     else:
         #DebugPrint("There's a busdriving happening.")
         for BusDriving in BusDrivings:
-            if BusDriving[0] == PlayerID:
-                ReturnedPlayerIDs.append(BusDriving[1])
-            elif BusDriving[1] == PlayerID:
-                ReturnedPlayerIDs.append(BusDriving[0])
+            if BusDriving['Target1'] == PlayerID:
+                ReturnedPlayerIDs.append(BusDriving['Target2'])
+            elif BusDriving['Target2'] == PlayerID:
+                ReturnedPlayerIDs.append(BusDriving['Target1'])
             else:
                 ReturnedPlayerIDs.append(PlayerID)
     #DebugPrint("Accounting for busdrivings (if any), the player actually targeted is " + str(ReturnedPlayerIDs))
@@ -1100,10 +1139,11 @@ def ReceiveBusDrivingActions(TonightsBusDrivers):
     BusDrivings = []
     for BusDriverEntry in TonightsBusDrivers:
         BusDriver = BusDriverEntry['Player']
-        BusDrivenPlayer1 = TryToPickMafiaPlayer(BusDriver,[])
         ExcludedPlayers = []
+        BusDrivenPlayer1 = TryToPickMafiaPlayer(BusDriver,ExcludedPlayers)
         ExcludedPlayers.append(BusDrivenPlayer1)
         BusDrivenPlayer2 = TryToPickTownPlayer(BusDriver,ExcludedPlayers)
+
         if (BusDrivenPlayer1 != 0) and (BusDrivenPlayer2 != 0):
             if BusDrivenPlayer1 > BusDrivenPlayer2:
                 InsertSlot1 = BusDrivenPlayer2
@@ -1120,32 +1160,49 @@ def ReceiveBusDrivingActions(TonightsBusDrivers):
                     PGOReaction(BusDrivenPlayer2,BusDriver)
                 else:
                     if not (BusDrivenPlayer1 in ThisNightsCommutings or BusDrivenPlayer2 in ThisNightsCommutings):
-                        DebugPrint("Tried to busdrive an active commuter, and so failed.")
+                        #DebugPrint("Tried to busdrive an active commuter, and so failed.")
                     #else:
                         DebugPrint("Player " + str(BusDriver) + " is busdriving Player " + str(BusDrivenPlayer1) + " and Player " + str(BusDrivenPlayer2))
-                        BusDrivings.append([BusDrivenPlayer1,BusDrivenPlayer2])
+                        BusDrivings.append({'BusDriver': BusDriver, 'Target1' : BusDrivenPlayer1, 'Target2' : BusDrivenPlayer2})
+        else:
+            DebugPrint("Player " + str(BusDriver) + " failed to pick two targets to busdrive.")
 
 
-def ReceiveTeamNightKillActions(TonightsTeamKillers):
+def ReceiveTeamNightKillActions(TonightsTeamKillerActions):
     global TeamNightKillActions
     global ThisNightsInvestigationActions
     global ThisNightsDoctorActions
+    global BusDrivings
     TeamNightKillActions = []
-    for TeamKillerEntry in TonightsTeamKillers:
+    for TeamKillerEntry in TonightsTeamKillerActions:
         TeamKiller = TeamKillerEntry['Player']
         Team = GetAttributeFromPlayer(TeamKiller,"Team")
         if GetAttributeFromPlayer(TeamKiller,'Alignment') == "Mafia":
-            Target = TryToPickTownPlayer(TeamKiller,[])
+            PlayersExcludedBecauseOfTeamActions = []
+            for BusDriving in BusDrivings:
+                #DebugPrint("Busdriving found.")
+                if BusDriving['BusDriver'] in ReturnOneListWithCommonItemsFromTwoLists(SearchPlayersFor("Alive","==","'Yes'"),SearchPlayersFor("Team","==",Team)):
+                    #DebugPrint("Busdriving was by a team member!")
+                    PlayersExcludedBecauseOfTeamActions.append(BusDriving['Target1'])
+                    PlayersExcludedBecauseOfTeamActions.append(BusDriving['Target2'])
+            Target = TryToPickTownPlayer(TeamKiller,PlayersExcludedBecauseOfTeamActions)
         else:
-            #First ensure you don't try to nightkill a person your teammate is investigating
-            PlayersBeingInvestigatedOrDoctoredByTeammates = []
+            #First ensure you don't try to nightkill a person your teammate is investigating, doctoring or busdriving
+            PlayersExcludedBecauseOfTeamActions = []
             for Investigation in ThisNightsInvestigationActions:
                 if Investigation['Cop'] in ReturnOneListWithCommonItemsFromTwoLists(SearchPlayersFor("Alive","==","'Yes'"),SearchPlayersFor("Team","==",Team)):
-                    PlayersBeingInvestigatedOrDoctoredByTeammates.append(Investigation['Target'])
+                    PlayersExcludedBecauseOfTeamActions.append(Investigation['Target'])
             for Doctoring in ThisNightsDoctorActions:
                 if Doctoring['Doctor'] in ReturnOneListWithCommonItemsFromTwoLists(SearchPlayersFor("Alive","==","'Yes'"),SearchPlayersFor("Team","==",Team)):
-                    PlayersBeingInvestigatedOrDoctoredByTeammates.append(Doctoring['Target'])
-            Target = TryToPickMafiaPlayer(TeamKiller,PlayersBeingInvestigatedOrDoctoredByTeammates)
+                    PlayersExcludedBecauseOfTeamActions.append(Doctoring['Target'])
+            #DebugPrint("Checking to see if Player " + str(TeamKiller) + "'s NightKill for Team " + str(Team) + " needs to exclude anyone because of busdriving.")
+            for BusDriving in BusDrivings:
+                #DebugPrint("Busdriving found.")
+                if BusDriving['BusDriver'] in ReturnOneListWithCommonItemsFromTwoLists(SearchPlayersFor("Alive","==","'Yes'"),SearchPlayersFor("Team","==",Team)):
+                    #DebugPrint("Busdriving was by a team member!")
+                    PlayersExcludedBecauseOfTeamActions.append(BusDriving['Target1'])
+                    PlayersExcludedBecauseOfTeamActions.append(BusDriving['Target2'])
+            Target = TryToPickMafiaPlayer(TeamKiller,PlayersExcludedBecauseOfTeamActions)
         if Target != 0:
             ActualTargets = FindBusDrivingPairs(Target)
             for ActualTarget in ActualTargets:
